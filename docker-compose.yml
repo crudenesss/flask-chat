@@ -1,0 +1,38 @@
+services:
+
+  mongodb:
+    container_name: mongo
+    image: mongo
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - ./db_configurations/confs/mongod.conf:/etc/mongod.conf
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
+      interval: 10s
+      timeout: 30s
+      retries: 3
+    ports:
+      - "27017:27017"
+    networks:
+      - app-network
+
+  app:
+    container_name: flask-chat-app
+    build:
+      context: .
+    image: crudenesss/flask-chat-app
+    depends_on:
+      mongodb: 
+        condition: service_healthy
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
