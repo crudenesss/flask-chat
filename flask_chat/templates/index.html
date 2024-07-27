@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flask-SocketIO Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.1.2/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+  </head>
+  <body>
+    <ul>
+      <li><a href="/profile">Profile</a></li>
+      {% if usr_data.role == "admin" %}
+      <li><a href="/manage">Manage Chat</a></li>
+      {% endif %}
+      <li><a href="/settings/profile">Settings</a></li>
+      <li><a href="/logout">Log out</a></li>
+    </ul>
+
+    <button id="l" onclick="reqMessages()">Load More</button>
+    <div id="messages">
+      {% for msg in msg_data %}
+      <div>
+        <p>{{ msg.username }}</p>
+        <p>{{ msg.message }}</p>
+        <p>{{ msg.timestamp }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    <input id="m" autocomplete="off" /><button onclick="sendMessage()">
+      Send
+    </button>
+
+    <script>
+      const socket = io.connect(
+        "http://" + document.location.hostname + ":5000/"
+      );
+
+      var messagesLoaded = "{{ msg_data | length }}";
+
+      socket.on("message_count", function (msg) {
+        messagesLoaded = msg;
+      });
+
+      socket.on("loading_finished", function() {
+        const loadButton = document.getElementById('l');
+        loadButton.style.display = 'none';
+      });
+
+      socket.on("load", function (msg) {
+        var nestedDiv = $("<div>").append(
+          $("<p>").text(msg.username),
+          $("<p>").text(msg.message),
+          $("<p>").text(msg.timestamp)
+        );
+
+        $("#messages").prepend(nestedDiv);
+        messagesLoaded = (parseInt(messagesLoaded, 10)+1).toString();
+      });
+
+      socket.on("message", function (msg) {
+        var timestamp = Date.now();
+        var nestedDiv = $("<div>").append(
+          $("<p>").text(msg.username),
+          $("<p>").text(msg.message),
+          $("<p>").text(getTime(timestamp))
+        );
+
+        $("#messages").append(nestedDiv);
+        messagesLoaded = (parseInt(messagesLoaded, 10)+1).toString();
+      });
+
+      function getTime(time) {
+
+        // Create a new Date object using the timestamp
+        var dateObject = new Date(time);
+
+        // Get the components of the time
+        var hours = dateObject.getHours();
+        var minutes = dateObject.getMinutes();
+        var seconds = dateObject.getSeconds();
+
+        // Format the time components to ensure two digits
+        hours = hours < 10 ? "0" + hours : hours;
+        minutes = minutes < 10 ? "0" + minutes : minutes;
+        seconds = seconds < 10 ? "0" + seconds : seconds;
+
+        // Create a string representing the time
+        var formattedTime = hours + ":" + minutes + ":" + seconds;
+        return formattedTime;
+      }
+
+      function reqMessages() {
+        socket.emit("request_message", messagesLoaded);
+      }
+
+      function sendMessage() {
+        var message = $("#m").val();
+        if (message.trim() !== "") {
+          socket.emit("message", {
+            message: message,
+            username: "{{ s.username }}",
+          });
+          $("#m").val("");
+        }
+      }
+    </script>
+  </body>
+</html>

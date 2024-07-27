@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Page</title>
+    <script>
+        let dbValues = {}
+        function toggleEdit() {
+            const dataElements = document.querySelectorAll('.editable');
+
+            const saveButton = document.getElementById('save');
+            saveButton.style.display = saveButton.style.display === 'none' ? 'inline' : 'none';
+
+            const switchButton = document.getElementById('switch');
+            if (switchButton.textContent === 'Edit Profile') {
+                // When info is editable - store default values from db
+                dataElements.forEach(el => {
+                    dbValues[el.name] = el.value;
+                    el.readOnly = false;
+                });
+                switchButton.textContent = 'Cancel';
+            } else {
+                // When info is non-editable - restore values to display
+                dataElements.forEach(el => {
+                    el.value = dbValues[el.name];
+                    el.readOnly = true;
+                });
+                switchButton.textContent = 'Edit Profile';
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div>
+        <a href="">Change profile photo<img src={{ data.pp_path }} alt="Profile Photo"></a>
+        <div>
+            {% from "_form_macros.html" import render_field %}
+            <form method="post" action="/profile">
+                <dl>
+                    {{ render_field(form.username) }}
+                    {{ render_field(form.email) }}
+                </dl>
+                <button id="save" style="display:none;">Save Changes</button>
+            </form>
+            <button onclick="toggleEdit()" id="switch">Edit Profile</button>
+
+            {% with messages = get_flashed_messages(with_categories=true) %} 
+                {% if messages %} 
+                    {% for message in messages %} 
+                        {{ message[1] }}
+                    {% endfor %}
+                {% endif %} 
+            {% endwith %}
+
+        </div>      
+    </div>
+
+</body>
+</html>
