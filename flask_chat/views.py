@@ -1,21 +1,26 @@
+import os
 from functools import wraps
 from flask import Blueprint, flash, redirect, render_template, request, session
 
-from forms import RegForm, LogForm, EditProfileForm
-from functions import password_hash, password_verify
+from forms import RegForm, LogForm, EditProfileForm, SettingsEditProfileForm
+from functions import password_hash, password_verify, filename_generator
 from models import db, return_user, return_email, insert_user
 
+UPLOAD_FOLDER = os.getenv("UPLOAD_FOLDER")
 
 # Blueprint initialization
 views_bp = Blueprint("routes", __name__)
 
+
 def login_required(f):
     """checks if the user is logged in"""
+
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "username" not in session.keys():
-            return redirect('/login')
+            return redirect("/login")
         return f(*args, **kwargs)
+
     return decorated_function
 
 
@@ -28,13 +33,15 @@ def main():
 
     # retrieve messages from database
     messages = db["messages"]
-    message_data = list(messages.find(
-        skip=(
-            0
-            if messages.count_documents({}) < 5
-            else messages.count_documents({}) - 5
+    message_data = list(
+        messages.find(
+            skip=(
+                0
+                if messages.count_documents({}) < 5
+                else messages.count_documents({}) - 5
+            )
         )
-    ))
+    )
 
     user_data = return_user(db["users"], session["username"])
 
@@ -200,7 +207,7 @@ def profile():
 def settings_profile():
 
     # Login form handle
-    form = EditProfileForm(request.form)
+    form = SettingsEditProfileForm(request.form)
 
     # Retrieve info from database about current user
     users = db["users"]
@@ -216,12 +223,38 @@ def settings_profile():
                 field.data = ""
 
         return render_template(
-            "profile.html", form=form, session=session, data=user_data
+            "settings_profile.html", form=form, session=session, data=user_data
+        )
+
+    if "file" in request.files:
+        content = request.files["file"]
+
+        if content == "":
+            flash("No upload file provided.")
+            return redirect(request.url)
+
+        pp_path = os.path.join(
+            UPLOAD_FOLDER + "profile_pictures/", filename_generator()
+        )
+
+        with open("." + pp_path, "wb") as file:
+            content.save(file)
+
+        update_string = {"$set": {"pp_path": pp_path}}
+
+        result = users.update_one(user_data, update_string)
+        if not result:
+            return render_template("error.html", session=session)
+
+        user_data = users.find_one(result.upserted_id)
+
+        return render_template(
+            "settings_profile.html", form=form, session=session, data=user_data
         )
 
     if not form.validate():
         return render_template(
-            "profile.html", form=form, session=session, data=user_data
+            "settings_profile.html", form=form, session=session, data=user_data
         )
 
     username = form.username.data
@@ -235,7 +268,7 @@ def settings_profile():
         if return_user(users, username):
             flash("This username is already in use.", category="username_error")
             return render_template(
-                "profile.html", form=form, session=session, data=user_data
+                "settings_profile.html", form=form, session=session, data=user_data
             )
         else:
             newvalues["username"] = username
@@ -245,7 +278,7 @@ def settings_profile():
         if return_email(users, email):
             flash("This email is already in use.", category="email_error")
             return render_template(
-                "profile.html", form=form, session=session, data=user_data
+                "settings_profile.html", form=form, session=session, data=user_data
             )
         else:
             newvalues["email"] = email
@@ -262,4 +295,6 @@ def settings_profile():
         session["username"] = username
         user_data = users.find_one(result.upserted_id)
 
-    return render_template("profile.html", session=session, form=form, data=user_data)
+    return render_template(
+        "settings_profile.html", session=session, form=form, data=user_data
+    )

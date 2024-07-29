@@ -34,13 +34,14 @@
 <body>
 
     <div>
-        <a href="">Change profile photo<img src={{ data.pp_path }} alt="Profile Photo"></a>
+        <a href="/settings/profile"><img src={{ data.pp_path }} alt="Profile Photo"></a>
         <div>
             {% from "_form_macros.html" import render_field %}
             <form method="post" action="/profile">
                 <dl>
                     {{ render_field(form.username) }}
                     {{ render_field(form.email) }}
+                    {{ render_field(form.bio) }}
                 </dl>
                 <button id="save" style="display:none;">Save Changes</button>
             </form>

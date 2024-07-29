@@ -8,7 +8,9 @@ from models import db, insert_message
 
 # Define app
 app = Flask(__name__)
+app.debug = True
 app.config["SECRET_KEY"] = getenv("FLASK_SECRET_KEY")
+app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
 app.register_blueprint(views_bp)
 
 # Create socket handle
