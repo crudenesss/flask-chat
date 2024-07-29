@@ -57,7 +57,7 @@ def insert_user(conn, usr, eml, pwd):
                 "email": eml,
                 "password": hashed_password,
                 "role": "admin",
-                "pp_path": "./static/profile_pictures/default/default.jpg",
+                "pp_path": "/static/storage/profile_pictures/default/default.jpg",
             }
         )
         print("User inserted successfully")

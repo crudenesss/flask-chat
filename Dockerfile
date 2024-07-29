@@ -1,4 +1,4 @@
-FROM python:3.12-slim as build
+FROM python:3.12-slim AS build
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ ENV POETRY_NO_INTERACTION=1 \
 
 RUN poetry install --only main --no-root 
 
-FROM python:3.12-slim as runtime
+FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
@@ -28,12 +28,8 @@ RUN chown -R $USERNAME:$USERNAME /app
 
 USER $USERNAME
 
-COPY --from=build /app/.venv/ ./.venv/
+COPY --from=build --chown=$USERNAME:$USERNAME /app/.venv/ ./.venv/
     
-COPY ./flask_chat/ .
-
-COPY entrypoint.sh .
-
-COPY db_configurations/scripts/init_db.py .
+COPY --chown=$USERNAME:$USERNAME ./flask_chat/ .
 
 ENTRYPOINT [ "sh", "./entrypoint.sh" ]

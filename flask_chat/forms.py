@@ -48,6 +48,14 @@ class EditProfileForm(Form):
         render_kw={'class': 'editable', 'readonly': True},
         name="email"
     )
+    bio = TextAreaField(
+        "Bio",
+        [
+            validators.Length(max=256, message="The maximum of 256 symbols are allowed")
+        ],
+        render_kw={'class': 'editable', 'readonly': True},
+        name="bio"
+    )
 
 class SettingsEditProfileForm(Form):
     username = StringField(

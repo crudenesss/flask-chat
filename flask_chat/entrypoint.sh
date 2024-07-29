@@ -1,7 +1,7 @@
-#!/bin/sh
+#!/bin/bash
 
 # activates prepared virtual environment 
-. .venv/bin/activate
+. ./.venv/bin/activate
 
 # runs script to complete all the preparation steps for clean db
 python ./init_db.py
