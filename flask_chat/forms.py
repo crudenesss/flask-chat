@@ -1,7 +1,10 @@
+"""WTforms used in application"""
+
 from wtforms import Form, StringField, PasswordField, validators, TextAreaField
 
 
 class RegForm(Form):
+    """form to sign up to the app"""
     username = StringField(
         "Username",
         [
@@ -26,11 +29,13 @@ class RegForm(Form):
 
 
 class LogForm(Form):
+    """form to log in the app"""
     username = StringField("Username", [validators.InputRequired()])
     password = PasswordField("Password", [validators.InputRequired()])
 
 
 class EditProfileForm(Form):
+    """form to fast-edit info about user"""
     username = StringField(
         "Name",
         [
@@ -58,6 +63,7 @@ class EditProfileForm(Form):
     )
 
 class SettingsEditProfileForm(Form):
+    """form to fully edit personal info in settings page"""
     username = StringField(
         "Name",
         [

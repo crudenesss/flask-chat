@@ -8,7 +8,7 @@
 <body>
 
     <div>
-        <img src={{ data.pp_path }} alt="Profile Photo">
+        <img src="{{ url_for('routes.profile_picture') }}" alt="Profile Photo">
         <div>
             {% from "_form_macros.html" import render_field %}
             <form method=post enctype=multipart/form-data action="/settings/profile">

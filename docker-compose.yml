@@ -6,8 +6,6 @@ services:
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-    volumes:
-      - ./db_configurations/confs/mongod.conf:/etc/mongod.conf
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
       interval: 10s
@@ -15,6 +13,9 @@ services:
       retries: 3
     ports:
       - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+      - ./db_configurations/confs/mongod.conf:/etc/mongod.conf
     networks:
       - app-network
 
@@ -30,9 +31,20 @@ services:
       - .env
     ports:
       - "5000:5000"
+    volumes:
+      - profile-picture-storage:/profile_pictures:rw
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  profile-picture-storage:
+    driver: local
+    name: profile-picture-storage
+  mongodb-data:
+    driver: local
+    name: mongodb-data
+  
