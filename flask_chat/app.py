@@ -1,4 +1,5 @@
-# import json
+"""main application file"""
+
 from os import getenv
 from flask import Flask, render_template, session
 from flask_socketio import SocketIO
@@ -10,7 +11,7 @@ from models import db, insert_message
 app = Flask(__name__)
 app.debug = True
 app.config["SECRET_KEY"] = getenv("FLASK_SECRET_KEY")
-app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 app.register_blueprint(views_bp)
 
 # Create socket handle
@@ -20,7 +21,8 @@ socket.init_app(app, cors_allowed_origins="*")
 
 @socket.on("message")
 def handle_message(msg):
-    print("Message:", msg)
+    """handle initial messages sent via websocket and saves them to database"""
+
     messages = db["messages"]
     result = insert_message(messages, msg["username"], msg["message"])
     if not result:
@@ -30,11 +32,14 @@ def handle_message(msg):
 
 @socket.on("request_message")
 def load_messages(cnt):
+    """handle socket request to load bunch of messages from database"""
 
+    # if no messages to load remain sends event via socket
     if db["messages"].count_documents({}) <= int(cnt):
         socket.emit("loading_finished")
         return
 
+    # retrieve 5 messages or whatever less that is remained
     messages = list(
         db["messages"].find(
             skip=(
@@ -46,10 +51,12 @@ def load_messages(cnt):
                 db["messages"].count_documents({}) - int(cnt)
                 if db["messages"].count_documents({}) <= 5 + int(cnt)
                 else 5
-            )
+            ),
         )
     )
-    for msg in sorted(messages, key=lambda x: x['_id'], reverse=True):
+
+    # sort messages in reversed order by date to send via socket event one by one
+    for msg in sorted(messages, key=lambda x: x["_id"], reverse=True):
         message = {
             "username": msg["username"],
             "message": msg["message"],

@@ -21,10 +21,14 @@ ARG USERNAME=app
 ARG UID=1000
 ARG GID=$UID
 
+ARG PP_PATH=/profile_pictures
+
 RUN groupadd --gid $GID $USERNAME \
     && useradd --uid $UID --gid $GID $USERNAME
 
 RUN chown -R $USERNAME:$USERNAME /app
+
+RUN mkdir $PP_PATH && chmod -R 600 $PP_PATH && chown -R $USERNAME:$USERNAME $PP_PATH
 
 USER $USERNAME
 
