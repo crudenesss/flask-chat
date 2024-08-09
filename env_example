@@ -11,9 +11,6 @@ APP_ADMINUSER=admin
 APP_ADMINEMAIL=example@mail.com
 APP_ADMINPASSWORD=examplepassword
 
-# In-app info
-UPLOAD_FOLDER=/static/storage/
-
 # Mongo misc info
 HOST=mongo
 DB=chat_db
