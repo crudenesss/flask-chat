@@ -1,6 +1,7 @@
 """routes for app"""
 
 import os
+import logging
 from functools import wraps
 from flask import (
     Blueprint,
@@ -14,16 +15,17 @@ from flask import (
 
 from constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
 from forms import RegForm, LogForm, EditProfileForm, SettingsEditProfileForm
-from functions import password_hash, password_verify, filename_generator
+from functions import password_hash, password_verify, filename_generator, log_request
 from models import db, insert_user
 
-# TODO: logging (debug, info, error)
-# TODO: add comments
 # TODO: add image validation
 # TODO: check mongod.conf
 
 # Blueprint initialization
 views_bp = Blueprint("routes", __name__)
+
+# Init root logger
+logger = logging.getLogger("gunicorn.access")
 
 
 def login_required(f):
@@ -43,22 +45,27 @@ def login_required(f):
 def main():
     """Root page where the chat operates"""
 
+    log_request()
+
     # Retrieve messages from database
     messages = db["messages"]
-    message_data = list(
-        messages.find(
-            skip=(
-                0
-                if messages.count_documents({}) < 5
-                else messages.count_documents({}) - 5
-            )
+    message_data = messages.find(
+        skip=(
+            0 if messages.count_documents({}) < 5 else messages.count_documents({}) - 5
         )
+    )
+    logger.debug(
+        "%s messages retrieved from collection '%s'.",
+        message_data.retrieved,
+        message_data.collection,
     )
 
     user_data = db["users"].find_one({"username": session.get("username")})
+    logger.debug("Info about user retrieved successfully")
 
+    message_data_listed = list(message_data)
     return render_template(
-        "index.html", s=session, msg_data=message_data, usr_data=user_data
+        "index.html", s=session, msg_data=message_data_listed, usr_data=user_data
     )
 
 
@@ -66,6 +73,8 @@ def main():
 @views_bp.route("/register", methods=["GET", "POST"])
 def register():
     """Registration page"""
+
+    log_request()
 
     # Signup form handle
     form = RegForm(request.form)
@@ -75,6 +84,7 @@ def register():
 
     # Here goes validating of WTForm inputs
     if not form.validate():
+        logger.debug("Validation of registration form's input failed")
         return render_template("register.html", form=form, session=session)
 
     # If everything's ok, retrieve inputs from form
@@ -86,7 +96,7 @@ def register():
     users = db["users"]
 
     # Check whether user tries to register with used credentials
-    if users.find_one({"username": session.get("username")}):
+    if users.find_one({"username": username}):
         flash("This username is already in use.", category="username_error")
         return render_template("register.html", form=form, session=session)
     if users.find_one({"email": session.get("email")}):
@@ -96,7 +106,10 @@ def register():
     # Make sure insertion is completed without errors
     result = insert_user(users, username, email, password)
     if not result:
+        logger.debug("New user registration failed")
         return render_template("error.html", session=session)
+
+    logger.info("New user registration is completed successfully")
 
     return render_template("verification.html", session=session)
 
@@ -106,6 +119,8 @@ def register():
 def login():
     """Login page"""
 
+    log_request()
+
     # Login form handle
     form = LogForm(request.form)
 
@@ -113,6 +128,7 @@ def login():
         return render_template("login.html", form=form, session=session)
 
     if not form.validate():
+        logger.debug("Validation of registration form's input failed")
         return render_template("login.html", form=form, session=session)
 
     username = form.username.data
@@ -121,7 +137,7 @@ def login():
     users = db["users"]
 
     # Check whether user exists in the database
-    if not users.find_one({"username": session.get("username")}):
+    if not users.find_one({"username": username}):
         flash("Invalid login or password.", category="login_error")
         return render_template("login.html", form=form, session=session)
 
@@ -131,11 +147,15 @@ def login():
     # Here goes verifying password hashes
     if not password_verify(password_db, password):
         flash("Invalid login or password.", category="login_error")
+        logger.info("Login failed")
         return render_template("login.html", form=form, session=session)
 
     # Adding username to session, considering it as successful login,
     # redirecting to main page
     session["username"] = username
+
+    logger.info("Login successful.")
+
     return redirect("/")
 
 
@@ -144,7 +164,10 @@ def login():
 def logout():
     """Logout function"""
 
+    log_request()
     session.pop("username", None)
+    logger.info("User logged out")
+
     return redirect("/login")
 
 
@@ -153,12 +176,15 @@ def logout():
 def profile():
     """Display profile page"""
 
+    log_request()
+
     # Login form handle
     form = EditProfileForm(request.form)
 
     # Retrieve info from database about current user
     users = db["users"]
     user_data = users.find_one({"username": session["username"]})
+    logger.debug("Info about user retrieved successfully")
 
     if request.method != "POST":
 
@@ -178,6 +204,8 @@ def profile():
 
     if not form.validate():
 
+        logger.debug("Validation of profile edit form's input failed")
+
         return render_template(
             "profile.html",
             form=form,
@@ -189,26 +217,15 @@ def profile():
     email = form.email.data
 
     # Create dictionary for values that were changed
-    newvalues = dict()
+    newvalues = {}
 
-    if username != user_data["username"]:
-        # Check whether user tries to replace info with used username
-        if users.find_one({"username": username}):
-            flash("This username is already in use.", category="username_error")
+    for key, data in (("username", username), ("email", email)):
+        if data == user_data[key]:
+            continue
 
-            return render_template(
-                "profile.html",
-                form=form,
-                session=session,
-                data=user_data,
-            )
-        else:
-            newvalues["username"] = username
-
-    if email != user_data["email"]:
-        # Same with email
-        if users.find_one({"email": email}):
-            flash("This email is already in use.", category="email_error")
+        # Check whether user tries to replace info with used credentials
+        if users.find_one({key: data}):
+            flash(f"This {data} is already in use.")
 
             return render_template(
                 "profile.html",
@@ -216,18 +233,21 @@ def profile():
                 session=session,
                 data=user_data,
             )
-        else:
-            newvalues["email"] = email
+
+        newvalues[key] = data
 
     # Check whether the values need to be updated
     if len(newvalues) > 0:
 
+        logger.debug("Values to update: %s", len(newvalues))
         update_string = {"$set": newvalues}
 
         result = users.update_one(user_data, update_string)
         if not result:
+            logger.debug("Data update failed")
             return render_template("error.html", session=session)
 
+        logger.info("User info updated successfully")
         session["username"] = username
         user_data = users.find_one(result.upserted_id)
 
@@ -239,12 +259,15 @@ def profile():
 def profile_picture():
     """Retrieve users' profile pictures"""
 
+    log_request()
+
     username = session.get("username")
     profile_picture_name = db["users"].find_one({"username": username}).get("pp_name")
 
     # Check if user has his profile picture set -
     # if not - return path with default picture
     if profile_picture_name is None:
+        logger.debug("No picture to retrieve: set to default")
         return send_file(DEFAULT_PROFILE_PICTURE_PATH)
     else:
         return send_file(
@@ -257,6 +280,8 @@ def profile_picture():
 def settings_profile():
     """Page to change profile data"""
 
+    log_request()
+
     # Login form handle
     form = SettingsEditProfileForm(request.form)
 
@@ -268,9 +293,9 @@ def settings_profile():
 
         # Placeholder values from database to display in profile
         for field in form:
-            try:
-                field.data = user_data[field.name]
-            except KeyError:
+            if user_data.get(field.name):
+                field.data = user_data.get(field.name)
+            else:
                 field.data = ""
 
         return render_template(
@@ -303,6 +328,7 @@ def settings_profile():
 
         result = users.update_one(user_data, update_string)
         if not result:
+            logger.debug("Data update failed")
             return render_template("error.html", session=session)
 
         return render_template(
@@ -312,7 +338,11 @@ def settings_profile():
             data=user_data,
         )
 
+    # If no files were attempted to be uploaded -
+    # moving on to validate uploaded sting data
     if not form.validate():
+
+        logger.debug("Validation of settings profile edit form's input failed")
 
         return render_template(
             "settings_profile.html",
@@ -325,35 +355,24 @@ def settings_profile():
     email = form.email.data
 
     # Create dictionary for values that were changed
-    newvalues = dict()
+    newvalues = {}
 
-    if username != user_data["username"]:
-        # Check whether user tries to replace info with used username
-        if users.find_one({"username": username}):
-            flash("This username is already in use.", category="username_error")
+    for key, data in (("username", username), ("email", email)):
+        if data == user_data[key]:
+            continue
+
+        # Check whether user tries to replace info with used credentials
+        if users.find_one({key: data}):
+            flash(f"This {data} is already in use.")
 
             return render_template(
-                "settings_profile.html",
+                "profile.html",
                 form=form,
                 session=session,
                 data=user_data,
             )
-        else:
-            newvalues["username"] = username
 
-    if email != user_data["email"]:
-        # Same with email
-        if users.find_one({"email": email}):
-            flash("This email is already in use.", category="email_error")
-
-            return render_template(
-                "settings_profile.html",
-                form=form,
-                session=session,
-                data=user_data,
-            )
-        else:
-            newvalues["email"] = email
+        newvalues[key] = data
 
     # Check whether the values need to be updated
     if len(newvalues) > 0:
@@ -362,8 +381,10 @@ def settings_profile():
 
         result = users.update_one(user_data, update_string)
         if not result:
+            logger.debug("Data update failed")
             return render_template("error.html", session=session)
 
+        logger.info("User info updated successfully")
         session["username"] = username
         user_data = users.find_one(result.upserted_id)
 

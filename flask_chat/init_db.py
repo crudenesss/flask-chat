@@ -2,6 +2,7 @@
 
 import os
 import time
+import sys
 from argon2 import PasswordHasher, exceptions
 from pymongo import MongoClient, errors
 
@@ -35,7 +36,7 @@ def maintain_connection(usr, pwd, hst):
             time.sleep(5)
 
     print("Failed to establish connection after maximum attempts.")
-    exit(1)
+    sys.exit()
 
 
 # Hash the password using argon2
@@ -78,7 +79,6 @@ def find_user(db, usr):
 def add_system_user(db, usr, pwd):
     """create system non-root user within database"""
     db.command("createUser", usr, pwd=pwd, roles=roles)
-    return
 
 
 client = maintain_connection(root_username, root_password, host)
