@@ -15,10 +15,9 @@ from flask import (
 
 from constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
 from forms import RegForm, LogForm, EditProfileForm, SettingsEditProfileForm
-from functions import password_hash, password_verify, filename_generator, log_request
+from functions import password_hash, password_verify, filename_generator, log_request, verify_image
 from models import db, insert_user
 
-# TODO: add image validation
 # TODO: check mongod.conf
 
 # Blueprint initialization
@@ -306,12 +305,21 @@ def settings_profile():
         )
 
     # Check if request contains data about file uploaded
-    if "file" in request.files:
+    if request.files["file"].read() != b"":
         content = request.files["file"]
+        content.seek(0)
+        content_clean = content.read()
+        content.seek(0)
+
+        logger.debug("file content: %s", content_clean)
 
         # Check if received file's content is empty or if file was not chosen
-        if content == "":
-            flash("No upload file provided.")
+        if content_clean == b"":
+            flash("Empty upload file provided.")
+            return redirect(request.url)
+
+        if not verify_image(content_clean):
+            flash("The file is inappropriate or corrupted. Try again")
             return redirect(request.url)
 
         # Generate new random name for file that will be stored
@@ -322,6 +330,11 @@ def settings_profile():
             os.path.join(PROFILE_PICTURE_STORAGE_PATH, picture_name), "wb"
         ) as file:
             content.save(file)
+
+        # remove old picture to avoid trashing
+        if user_data.get("pp_name") is not None:
+            os.remove(os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("pp_name")))
+            logger.debug("previous picture is removed")
 
         # Update profile picture filename in database
         update_string = {"$set": {"pp_name": picture_name}}
