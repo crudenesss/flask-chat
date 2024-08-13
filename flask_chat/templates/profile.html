@@ -37,6 +37,7 @@
       <a href="/settings/profile"
         ><img
           src="{{ url_for('routes.profile_picture') }}"
+          height="200"
           alt="Profile Photo"
       /></a>
       <div>
@@ -48,7 +49,9 @@
           </dl>
           <button id="save" style="display: none">Save Changes</button>
         </form>
-        <button onclick="toggleEdit()" id="switch">Edit Profile</button>
+        {% if session.username == data.username %}
+          <button onclick="toggleEdit()" id="switch">Edit Profile</button>
+        {% endif %}
 
         {% with messages = get_flashed_messages(with_categories=true) %} {% if
         messages %} {% for message in messages %} {{ message[1] }} {% endfor %}

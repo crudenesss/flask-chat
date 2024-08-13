@@ -17,6 +17,8 @@ FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
+RUN apt update && apt install -y --no-install-recommends libmagic1 libmagic-dev
+
 ARG USERNAME=app
 ARG UID=1000
 ARG GID=$UID
