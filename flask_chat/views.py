@@ -14,11 +14,9 @@ from flask import (
 )
 
 from constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
-from forms import RegForm, LogForm, EditProfileForm, SettingsEditProfileForm
+from forms import RegForm, LogForm, EditProfileForm
 from functions import password_hash, password_verify, filename_generator, log_request, verify_image
 from models import db, insert_user
-
-# TODO: check mongod.conf
 
 # Blueprint initialization
 views_bp = Blueprint("routes", __name__)
@@ -201,9 +199,45 @@ def profile():
             data=user_data,
         )
 
-    if not form.validate():
+    # Check if request contains data about file uploaded
+    if request.files["file"].read() != b"":
+        content = request.files["file"]
+        content.seek(0)
+        content_clean = content.read()
+        content.seek(0)
 
-        logger.debug("Validation of profile edit form's input failed")
+        logger.debug("file content: %s", content_clean)
+
+        # Check if received file's content is empty or if file was not chosen
+        if content_clean == b"":
+            flash("Empty upload file provided.")
+            return redirect(request.url)
+
+        if not verify_image(content_clean):
+            flash("The file is inappropriate or corrupted. Try again")
+            return redirect(request.url)
+
+        # Generate new random name for file that will be stored
+        picture_name = filename_generator()
+
+        # Saving file to it's defined path
+        with open(
+            os.path.join(PROFILE_PICTURE_STORAGE_PATH, picture_name), "wb"
+        ) as file:
+            content.save(file)
+
+        # remove old picture to avoid trashing
+        if user_data.get("pp_name") is not None:
+            os.remove(os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("pp_name")))
+            logger.debug("previous picture is removed")
+
+        # Update profile picture filename in database
+        update_string = {"$set": {"pp_name": picture_name}}
+
+        result = users.update_one(user_data, update_string)
+        if not result:
+            logger.debug("Data update failed")
+            return render_template("error.html", session=session)
 
         return render_template(
             "profile.html",
@@ -211,6 +245,11 @@ def profile():
             session=session,
             data=user_data,
         )
+
+    if not form.validate():
+
+        logger.debug("Validation of profile edit form's input failed")
+        return redirect(request.url)
 
     username = form.username.data
     email = form.email.data
@@ -272,138 +311,3 @@ def profile_picture():
         return send_file(
             os.path.join(PROFILE_PICTURE_STORAGE_PATH, profile_picture_name)
         )
-
-
-@views_bp.route("/settings/profile", methods=["GET", "POST"])
-@login_required
-def settings_profile():
-    """Page to change profile data"""
-
-    log_request()
-
-    # Login form handle
-    form = SettingsEditProfileForm(request.form)
-
-    # Retrieve info from database about current user
-    users = db["users"]
-    user_data = users.find_one({"username": session["username"]})
-
-    if request.method != "POST":
-
-        # Placeholder values from database to display in profile
-        for field in form:
-            if user_data.get(field.name):
-                field.data = user_data.get(field.name)
-            else:
-                field.data = ""
-
-        return render_template(
-            "settings_profile.html",
-            form=form,
-            session=session,
-            data=user_data,
-        )
-
-    # Check if request contains data about file uploaded
-    if request.files["file"].read() != b"":
-        content = request.files["file"]
-        content.seek(0)
-        content_clean = content.read()
-        content.seek(0)
-
-        logger.debug("file content: %s", content_clean)
-
-        # Check if received file's content is empty or if file was not chosen
-        if content_clean == b"":
-            flash("Empty upload file provided.")
-            return redirect(request.url)
-
-        if not verify_image(content_clean):
-            flash("The file is inappropriate or corrupted. Try again")
-            return redirect(request.url)
-
-        # Generate new random name for file that will be stored
-        picture_name = filename_generator()
-
-        # Saving file to it's defined path
-        with open(
-            os.path.join(PROFILE_PICTURE_STORAGE_PATH, picture_name), "wb"
-        ) as file:
-            content.save(file)
-
-        # remove old picture to avoid trashing
-        if user_data.get("pp_name") is not None:
-            os.remove(os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("pp_name")))
-            logger.debug("previous picture is removed")
-
-        # Update profile picture filename in database
-        update_string = {"$set": {"pp_name": picture_name}}
-
-        result = users.update_one(user_data, update_string)
-        if not result:
-            logger.debug("Data update failed")
-            return render_template("error.html", session=session)
-
-        return render_template(
-            "settings_profile.html",
-            form=form,
-            session=session,
-            data=user_data,
-        )
-
-    # If no files were attempted to be uploaded -
-    # moving on to validate uploaded sting data
-    if not form.validate():
-
-        logger.debug("Validation of settings profile edit form's input failed")
-
-        return render_template(
-            "settings_profile.html",
-            form=form,
-            session=session,
-            data=user_data,
-        )
-
-    username = form.username.data
-    email = form.email.data
-
-    # Create dictionary for values that were changed
-    newvalues = {}
-
-    for key, data in (("username", username), ("email", email)):
-        if data == user_data[key]:
-            continue
-
-        # Check whether user tries to replace info with used credentials
-        if users.find_one({key: data}):
-            flash(f"This {data} is already in use.")
-
-            return render_template(
-                "profile.html",
-                form=form,
-                session=session,
-                data=user_data,
-            )
-
-        newvalues[key] = data
-
-    # Check whether the values need to be updated
-    if len(newvalues) > 0:
-
-        update_string = {"$set": newvalues}
-
-        result = users.update_one(user_data, update_string)
-        if not result:
-            logger.debug("Data update failed")
-            return render_template("error.html", session=session)
-
-        logger.info("User info updated successfully")
-        session["username"] = username
-        user_data = users.find_one(result.upserted_id)
-
-    return render_template(
-        "settings_profile.html",
-        form=form,
-        session=session,
-        data=user_data,
-    )

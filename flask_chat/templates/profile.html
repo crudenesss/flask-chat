@@ -13,6 +13,10 @@
         saveButton.style.display =
           saveButton.style.display === "none" ? "inline" : "none";
 
+        const photoUploadButton = document.getElementById("pic-upload");
+        photoUploadButton.style.display =
+          photoUploadButton.style.display === "none" ? "inline" : "none";
+
         const switchButton = document.getElementById("switch");
         if (switchButton.textContent === "Edit Profile") {
           // When info is editable - store default values from db
@@ -34,24 +38,34 @@
   </head>
   <body>
     <div>
-      <a href="/settings/profile"
-        ><img
-          src="{{ url_for('routes.profile_picture') }}"
-          height="200"
-          alt="Profile Photo"
-      /></a>
+      <img
+        src="{{ url_for('routes.profile_picture') }}"
+        height="200"
+        alt="Profile Photo"
+      />
       <div>
         {% from "_form_macros.html" import render_field %}
-        <form method="post" action="/profile">
+        <form method="post" action="/profile" enctype=multipart/form-data>
+          <input
+            id="pic-upload"
+            style="display: none"
+            type="file"
+            name="file"
+            accept="image/gif, image/jpeg, image/png, image/webp"
+          />
           <dl>
-            {{ render_field(form.username) }} {{ render_field(form.email) }} {{
-            render_field(form.bio) }}
+            {{ render_field(form.username) }} 
+            {{ render_field(form.email) }} 
+            {{ render_field(form.bio) }}
           </dl>
           <button id="save" style="display: none">Save Changes</button>
         </form>
-        {% if session.username == data.username %}
+        <div>
+          {% if session.username == data.username %}
           <button onclick="toggleEdit()" id="switch">Edit Profile</button>
-        {% endif %}
+          {% endif %}
+          <a href="/">Back to Chat</a>
+        </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %} {% if
         messages %} {% for message in messages %} {{ message[1] }} {% endfor %}
