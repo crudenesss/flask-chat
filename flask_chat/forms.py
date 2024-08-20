@@ -65,28 +65,3 @@ class EditProfileForm(Form):
         render_kw={'class': 'editable', 'readonly': True},
         name="bio"
     )
-
-class SettingsEditProfileForm(Form):
-    """Form to fully edit personal info in settings page"""
-    username = StringField(
-        "Name",
-        [
-            validators.InputRequired(),
-            validators.Length(
-                min=5, max=32, message="Login must contain between 5 and 32 symbols"
-            ),
-        ],
-        name="username"
-    )
-    email = StringField(
-        "E-mail",
-        [validators.Email()],
-        name="email"
-    )
-    bio = TextAreaField(
-        "Bio",
-        [
-            validators.Length(max=256, message="The maximum of 256 symbols are allowed")
-        ],
-        name="bio"
-    )
