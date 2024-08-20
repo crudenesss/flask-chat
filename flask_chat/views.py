@@ -2,7 +2,6 @@
 
 import os
 import logging
-from functools import wraps
 from flask import (
     Blueprint,
     flash,
@@ -14,6 +13,7 @@ from flask import (
 )
 
 from constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
+from decorators import login_required, privilege_required
 from forms import RegForm, LogForm, EditProfileForm
 from functions import password_hash, password_verify, filename_generator, log_request, verify_image
 from models import db, insert_user
@@ -23,18 +23,6 @@ views_bp = Blueprint("routes", __name__)
 
 # Init root logger
 logger = logging.getLogger("gunicorn.access")
-
-
-def login_required(f):
-    """Checks if the user is logged in"""
-
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "username" not in session.keys():
-            return redirect("/login")
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 @views_bp.route("/", methods=["GET"])
@@ -311,3 +299,13 @@ def profile_picture():
         return send_file(
             os.path.join(PROFILE_PICTURE_STORAGE_PATH, profile_picture_name)
         )
+
+
+@views_bp.route("/manage")
+@privilege_required
+def manage_chat():
+    """Page to handle chat settings"""
+
+    log_request()
+
+    return "Welcome to admin panel! Under maintainance. Stand by"

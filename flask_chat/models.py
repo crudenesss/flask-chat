@@ -24,7 +24,7 @@ except errors.PyMongoError as err:
 
 def insert_user(collection, username, email, password):
     """add document with user info"""
-    user_data = {"username": username, "email": email, "password": password}
+    user_data = {"username": username, "email": email, "role": "user", "password": password}
     try:
         collection.insert_one(user_data)
         logger.debug("1 user inserted in a database")
