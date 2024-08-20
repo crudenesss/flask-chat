@@ -15,7 +15,7 @@ services:
       - "27017:27017"
     volumes:
       - mongodb-data:/data/db
-      - ./db_configurations/confs/mongod.conf:/etc/mongod.conf
+    command: [--auth]
     networks:
       - app-network
 
