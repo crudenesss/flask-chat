@@ -3,3 +3,4 @@ __pycache__
 .env
 .idea
 local_scripts
+db_configurations
