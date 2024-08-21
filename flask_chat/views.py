@@ -15,7 +15,13 @@ from flask import (
 from constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
 from decorators import login_required, privilege_required
 from forms import RegForm, LogForm, EditProfileForm
-from functions import password_hash, password_verify, filename_generator, log_request, verify_image
+from functions import (
+    password_hash,
+    password_verify,
+    filename_generator,
+    log_request,
+    verify_image,
+)
 from models import db, insert_user
 
 # Blueprint initialization
@@ -123,7 +129,7 @@ def login():
 
     # Check whether user exists in the database
     if not users.find_one({"username": username}):
-        flash("Invalid login or password.", category="login_error")
+        flash("Invalid username or password.")
         return render_template("login.html", form=form, session=session)
 
     # Retrieve correct password hash
@@ -131,7 +137,7 @@ def login():
 
     # Here goes verifying password hashes
     if not password_verify(password_db, password):
-        flash("Invalid login or password.", category="login_error")
+        flash("Invalid username or password.")
         logger.info("Login failed")
         return render_template("login.html", form=form, session=session)
 
@@ -216,7 +222,9 @@ def profile():
 
         # remove old picture to avoid trashing
         if user_data.get("pp_name") is not None:
-            os.remove(os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("pp_name")))
+            os.remove(
+                os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("pp_name"))
+            )
             logger.debug("previous picture is removed")
 
         # Update profile picture filename in database
@@ -235,7 +243,6 @@ def profile():
         )
 
     if not form.validate():
-
         logger.debug("Validation of profile edit form's input failed")
         return redirect(request.url)
 
@@ -264,7 +271,6 @@ def profile():
 
     # Check whether the values need to be updated
     if len(newvalues) > 0:
-
         logger.debug("Values to update: %s", len(newvalues))
         update_string = {"$set": newvalues}
 

@@ -45,12 +45,7 @@ def verify_image(data):
         bool: True if image is appropriate format and not corrupted, otherwise False
     """
 
-    allowed_image_types = [
-        "image/gif", 
-        "image/jpeg", 
-        "image/png", 
-        "image/webp",
-    ]
+    allowed_image_types = ["image/jpeg", "image/png"]
 
     try:
         image = Image.open(io.BytesIO(data))
@@ -65,7 +60,7 @@ def verify_image(data):
 
     content_type = magic.from_buffer(data, mime=True)
     if content_type not in allowed_image_types:
-        logger("Error while verifying image: signature does not match allowed formats")
+        logger.error("Error while verifying image: signature does not match allowed formats")
         return False
 
     logger.debug("Signature is verified")
