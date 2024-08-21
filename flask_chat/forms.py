@@ -12,13 +12,13 @@ class RegForm(Form):
     username = StringField(
         "Username",
         [
-            validators.InputRequired(),
+            validators.DataRequired(),
             validators.Length(
                 min=5, max=32, message="Username must contain between 5 and 32 symbols"
             ),
         ],
     )
-    email = StringField("E-mail", [validators.InputRequired(), validators.Email()])
+    email = StringField("E-mail", [validators.DataRequired(), validators.Email()])
     password = PasswordField(
         "New Password",
         [
@@ -41,9 +41,9 @@ class LogForm(Form):
 class EditProfileForm(Form):
     """Form to fast-edit info about user"""
     username = StringField(
-        "Name",
+        "Username",
         [
-            validators.InputRequired(),
+            validators.DataRequired(),
             validators.Length(
                 min=5, max=32, message="Username must contain between 5 and 32 symbols"
             ),
@@ -64,4 +64,13 @@ class EditProfileForm(Form):
         ],
         render_kw={'class': 'editable', 'readonly': True},
         name="bio"
+    )
+
+class MessageForm(Form):
+    """Form to handle messages within chat"""
+    message = TextAreaField(
+        [
+            validators.Length(max=4096, message="The maximum of 4096 symbols are allowed")
+        ],
+        name="message"
     )

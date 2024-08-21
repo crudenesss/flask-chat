@@ -12,17 +12,18 @@ from flask import (
     session,
 )
 
-from constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
+from models import db, insert_user
 from decorators import login_required, privilege_required
 from forms import RegForm, LogForm, EditProfileForm
-from functions import (
+
+from utils.constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
+from utils.helpers import (
     password_hash,
     password_verify,
     filename_generator,
     log_request,
     verify_image,
 )
-from models import db, insert_user
 
 # Blueprint initialization
 views_bp = Blueprint("routes", __name__)
