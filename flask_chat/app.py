@@ -2,15 +2,16 @@
 
 import logging
 from os import getenv
-from flask import Flask, render_template, session
+from flask import Flask, render_template, request, session
 from flask_socketio import SocketIO
 
+# from forms import MessageForm
+from utils.constants import MSG_LOAD_BATCH
 from views import views_bp
 from models import db, insert_message
 
 # Define app
 app = Flask(__name__)
-app.debug = True
 
 app.config["SECRET_KEY"] = getenv("FLASK_SECRET_KEY")
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
@@ -28,10 +29,16 @@ logger = logging.getLogger("gunicorn.access")
 def handle_message(msg):
     """handle initial messages sent via websocket and saves them to database"""
 
-    logger.info("Message received")
+    logger.debug("Message received")
+
+    # form = request.form(MessageForm)
+    # TODO: validation
+
+    username = msg.get("username")
+    message = msg.get("message")
 
     messages = db["messages"]
-    result = insert_message(messages, msg["username"], msg["message"])
+    result = insert_message(messages, username, message)
     if not result:
         logger.error("An error occured while handling message")
         return render_template("error.html", session=session)
@@ -42,6 +49,17 @@ def handle_message(msg):
 def load_messages(cnt):
     """handle socket request to load bunch of messages from database"""
 
+    logger.debug("Messages loaded: %s", cnt)
+
+    # Validation piece: handles random other tampered values in global
+    # counter variable than numbers
+    try:
+        int(cnt)
+    except ValueError:
+        logger.error("""Variale 'cnt' value is not expected: not convertable to int
+            Current 'cnt' value - %s""", cnt)
+        return
+
     # if no messages to load remain sends event via socket
     if db["messages"].count_documents({}) <= int(cnt):
         socket.emit("loading_finished")
@@ -51,13 +69,13 @@ def load_messages(cnt):
     messages = db["messages"].find(
         skip=(
             0
-            if db["messages"].count_documents({}) < 5 + int(cnt)
-            else db["messages"].count_documents({}) - 5 - int(cnt)
+            if db["messages"].count_documents({}) < MSG_LOAD_BATCH + int(cnt)
+            else db["messages"].count_documents({}) - MSG_LOAD_BATCH - int(cnt)
         ),
         limit=(
             db["messages"].count_documents({}) - int(cnt)
-            if db["messages"].count_documents({}) <= 5 + int(cnt)
-            else 5
+            if db["messages"].count_documents({}) <= MSG_LOAD_BATCH + int(cnt)
+            else MSG_LOAD_BATCH
         ),
     )
 
@@ -77,7 +95,3 @@ def load_messages(cnt):
             "timestamp": str(msg["timestamp"]),
         }
         socket.emit("load", message)
-
-
-# if __name__ == "__main__":
-#     socket.run(app, host="0.0.0.0", port=5000, debug=True)

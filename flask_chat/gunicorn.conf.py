@@ -1,5 +1,5 @@
 """Special configuration for logging with gunicorn"""
-from filters import FilterDebug, IgnoreDebug
+from utils.filters import FilterDebug, IgnoreDebug
 
 # Define the logging configuration
 logconfig_dict = {

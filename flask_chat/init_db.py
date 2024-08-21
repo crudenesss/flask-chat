@@ -6,7 +6,7 @@ import time
 import sys
 from pymongo import MongoClient, errors
 
-from functions import password_hash
+from utils.helpers import password_hash
 
 # Load logger
 logger = logging.getLogger("gunicorn.access")
