@@ -6,17 +6,17 @@ import os
 from pymongo import MongoClient, errors
 
 # Define constants
-USER = os.getenv("MONGO_USERNAME")
-PASSWORD = os.getenv("MONGO_PASSWORD")
-HOST = os.getenv("HOST")
-DB = os.getenv("DB")
+MONGO_USERNAME = os.getenv("MONGO_USERNAME")
+MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
+MONGO_HOSTNAME = os.getenv("MONGO_HOSTNAME")
+MONGO_DATABASE = os.getenv("MONGO_DATABASE")
 
 logger = logging.getLogger("gunicorn.access")
 
 # Init database connection and get app database handle
 try:
-    client = MongoClient(f"mongodb://{USER}:{PASSWORD}@{HOST}:27017/")
-    db = client[DB]
+    client = MongoClient(f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:27017/")
+    db = client[MONGO_DATABASE]
     logger.info("Connection is to database is maintained")
 except errors.PyMongoError as err:
     logger.error("An error occured while maintaining connection to database: %s", err)
