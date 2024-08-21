@@ -14,7 +14,7 @@ class RegForm(Form):
         [
             validators.InputRequired(),
             validators.Length(
-                min=5, max=32, message="Login must contain between 5 and 32 symbols"
+                min=5, max=32, message="Username must contain between 5 and 32 symbols"
             ),
         ],
     )
@@ -25,7 +25,7 @@ class RegForm(Form):
             validators.InputRequired(),
             validators.EqualTo("confirm", message="Passwords must match"),
             validators.Length(
-                min=8, max=32, message="Password must contain between 8 and 32 symbols"
+                min=8, max=128, message="Password must contain between 8 and 128 symbols"
             ),
         ],
     )
@@ -45,7 +45,7 @@ class EditProfileForm(Form):
         [
             validators.InputRequired(),
             validators.Length(
-                min=5, max=32, message="Login must contain between 5 and 32 symbols"
+                min=5, max=32, message="Username must contain between 5 and 32 symbols"
             ),
         ],
         render_kw={'class': 'editable', 'readonly': True},
