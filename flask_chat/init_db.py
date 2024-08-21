@@ -1,13 +1,19 @@
 """initial script for database setup"""
 
+import logging
 import os
 import time
 import sys
-from argon2 import PasswordHasher, exceptions
 from pymongo import MongoClient, errors
 
+from functions import password_hash
+
+# Load logger
+logger = logging.getLogger("gunicorn.access")
+
 # Load environment variables
-host = os.getenv("HOST")
+host = os.getenv("MONGO_HOSTNAME")
+database = os.getenv("MONGO_DATABASE")
 
 mongo_username = os.getenv("MONGO_USERNAME")
 mongo_password = os.getenv("MONGO_PASSWORD")
@@ -20,7 +26,7 @@ email = os.getenv("APP_ADMINEMAIL")
 password = os.getenv("APP_ADMINPASSWORD")
 
 # Define roles for new user
-roles = [{"role": "readWrite", "db": "chat_db"}]
+roles = [{"role": "readWrite", "db": database}]
 
 
 # Trying to connect to db given 3 attempts
@@ -29,31 +35,20 @@ def maintain_connection(usr, pwd, hst):
     for att in range(1, 4):
         try:
             conn = MongoClient(f"mongodb://{usr}:{pwd}@{hst}:27017/")
-            print(f"ATTEMPT {att}: The connection is maintained!")
+            logger.info("ATTEMPT %s: The connection is maintained!", att)
             return conn
-        except errors.PyMongoError as e:
-            print(f"ERROR AT ATTEMPT {att}: {e}")
+        except errors.PyMongoError:
+            logger.error("ERROR AT ATTEMPT %s", att)
             time.sleep(5)
 
-    print("Failed to establish connection after maximum attempts.")
+    logger.error("Failed to establish connection after maximum attempts.")
     sys.exit()
-
-
-# Hash the password using argon2
-def hash_password(pwd):
-    """hash password"""
-    try:
-        ph = PasswordHasher()
-        return ph.hash(pwd)
-    except exceptions.Argon2Error:
-        print("Error hashing password")
-        return None
 
 
 # Insert user with Argon2-encrypted password into a "users" collection
 def insert_user(conn, usr, eml, pwd):
     """inserts initial in-app user"""
-    hashed_password = hash_password(pwd)
+    hashed_password = password_hash(pwd)
     if hashed_password:
         conn.users.insert_one(
             {
@@ -63,9 +58,9 @@ def insert_user(conn, usr, eml, pwd):
                 "role": "admin",
             }
         )
-        print("User inserted successfully")
+        logger.info("Admin user inserted successfully")
     else:
-        print("Failed to insert user due to password hashing error")
+        logger.info("Failed to insert user due to password hashing error")
 
 
 # Find whether our special user exists
@@ -79,20 +74,22 @@ def find_user(db, usr):
 def add_system_user(db, usr, pwd):
     """create system non-root user within database"""
     db.command("createUser", usr, pwd=pwd, roles=roles)
+    logger.info("Non-privileged user is added")
 
 
 client = maintain_connection(root_username, root_password, host)
 admin_db = client.admin
 if not find_user(admin_db, mongo_username):
+    logger.info("No additional user found, adding non-root")
     add_system_user(admin_db, mongo_username, mongo_password)
 
 client.close()
 
 # Insert a user with the desired credentials
 client = maintain_connection(mongo_username, mongo_password, host)
-database = client.chat_db
+database = client[database]
 
 users = database.users.find_one({"role": "admin"})
 if not users:
     insert_user(database, username, email, password)
-    print("Initial data insertion is completed!")
+    logger.info("No in-app user found in database, added admin successfully!")

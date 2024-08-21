@@ -17,6 +17,8 @@ FROM python:3.12-slim AS runtime
 
 WORKDIR /app
 
+ARG DEBIAN_FRONTEND=noninteractive apt update
+
 RUN apt update && apt install -y --no-install-recommends libmagic1 libmagic-dev
 
 ARG USERNAME=app

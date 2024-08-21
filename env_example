@@ -12,5 +12,5 @@ APP_ADMINEMAIL=example@mail.com
 APP_ADMINPASSWORD=examplepassword
 
 # Mongo misc info
-HOST=mongo
-DB=chat_db
+MONGO_HOSTNAME=mongo
+MONGO_DATABASE=chat_db
