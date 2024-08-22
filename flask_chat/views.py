@@ -90,10 +90,10 @@ def register():
     # Check whether user tries to register with used credentials
     if users.find_one({"username": username}):
         flash("This username is already in use.", category="username_error")
-        return render_template("register.html", form=form, session=session)
-    if users.find_one({"email": session.get("email")}):
+        return redirect(request.url)
+    if users.find_one({"email": email}):
         flash("This email is already in use.", category="email_error")
-        return render_template("register.html", form=form, session=session)
+        return redirect(request.url)
 
     # Make sure insertion is completed without errors
     result = insert_user(users, username, email, password)
