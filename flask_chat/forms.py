@@ -16,6 +16,9 @@ class RegForm(Form):
             validators.Length(
                 min=5, max=32, message="Username must contain between 5 and 32 symbols"
             ),
+            validators.Regexp(
+                "^[a-zA-Z0-9_]+$", 
+                message="Username must only contain Latin letters, numbers or underscores")
         ],
     )
     email = StringField("E-mail", [validators.DataRequired(), validators.Email()])
@@ -47,6 +50,7 @@ class EditProfileForm(Form):
             validators.Length(
                 min=5, max=32, message="Username must contain between 5 and 32 symbols"
             ),
+            validators.Regexp("^[a-zA-Z0-9_]+$"),
         ],
         render_kw={'class': 'editable', 'readonly': True},
         name="username"
