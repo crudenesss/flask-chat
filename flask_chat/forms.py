@@ -1,6 +1,7 @@
 """WTforms used in application"""
 
 from wtforms import Form, StringField, PasswordField, validators, TextAreaField
+from utils.constants import WEBSITE_NAME
 
 
 class RegForm(Form):
@@ -20,6 +21,9 @@ class RegForm(Form):
                 "^[a-zA-Z0-9_]+$", 
                 message="Username must only contain Latin letters, numbers or underscores")
         ],
+        description=f"""Username is your unique name in {WEBSITE_NAME}.
+            You can use Latin letters (both cases), numbers and underscores. 
+            Length must be 5-32 symbols."""
     )
     email = StringField("E-mail", [validators.DataRequired(), validators.Email()])
     password = PasswordField(
@@ -52,6 +56,9 @@ class EditProfileForm(Form):
             ),
             validators.Regexp("^[a-zA-Z0-9_]+$"),
         ],
+        description=f"""Username is your unique name in {WEBSITE_NAME}.
+            You can use Latin letters (both cases), numbers and underscores. 
+            Length must be 5-32 symbols.""",
         render_kw={'class': 'editable', 'readonly': True},
         name="username"
     )

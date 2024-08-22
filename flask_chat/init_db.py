@@ -12,8 +12,8 @@ from utils.helpers import password_hash
 logger = logging.getLogger("gunicorn.access")
 
 # Load environment variables
-host = os.getenv("MONGO_HOSTNAME")
-database = os.getenv("MONGO_DATABASE")
+mongo_hostname = os.getenv("MONGO_HOSTNAME")
+mongo_database = os.getenv("MONGO_DATABASE")
 
 mongo_username = os.getenv("MONGO_USERNAME")
 mongo_password = os.getenv("MONGO_PASSWORD")
@@ -26,7 +26,7 @@ email = os.getenv("APP_ADMINEMAIL")
 password = os.getenv("APP_ADMINPASSWORD")
 
 # Define roles for new user
-roles = [{"role": "readWrite", "db": database}]
+roles = [{"role": "readWrite", "db": mongo_database}]
 
 
 # Trying to connect to db given 3 attempts
@@ -77,7 +77,7 @@ def add_system_user(db, usr, pwd):
     logger.info("Non-privileged user is added")
 
 
-client = maintain_connection(root_username, root_password, host)
+client = maintain_connection(root_username, root_password, mongo_hostname)
 admin_db = client.admin
 if not find_user(admin_db, mongo_username):
     logger.info("No additional user found, adding non-root")
@@ -86,10 +86,10 @@ if not find_user(admin_db, mongo_username):
 client.close()
 
 # Insert a user with the desired credentials
-client = maintain_connection(mongo_username, mongo_password, host)
-database = client[database]
+client = maintain_connection(mongo_username, mongo_password, mongo_hostname)
+mongo_database = client[mongo_database]
 
-users = database.users.find_one({"role": "admin"})
+users = mongo_database.users.find_one({"role": "admin"})
 if not users:
-    insert_user(database, username, email, password)
+    insert_user(mongo_database, username, email, password)
     logger.info("No in-app user found in database, added admin successfully!")

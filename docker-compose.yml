@@ -20,10 +20,10 @@ services:
       - app-network
 
   app:
-    container_name: ${APP_NAME}
+    container_name: yapp-space
     build:
       context: .
-    image: crudenesss/${APP_NAME}
+    image: crudenesss/yapp-space
     depends_on:
       mongodb: 
         condition: service_healthy
