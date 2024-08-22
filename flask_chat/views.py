@@ -16,11 +16,15 @@ from models import db, insert_user
 from decorators import login_required, privilege_required
 from forms import RegForm, LogForm, EditProfileForm
 
-from utils.constants import PROFILE_PICTURE_STORAGE_PATH, DEFAULT_PROFILE_PICTURE_PATH
+from utils.constants import (
+    PROFILE_PICTURE_STORAGE_PATH,
+    DEFAULT_PROFILE_PICTURE_PATH,
+    WEBSITE_NAME,
+)
 from utils.helpers import (
     password_hash,
     password_verify,
-    filename_generator,
+    random_strings_generator,
     log_request,
     verify_image,
 )
@@ -57,7 +61,11 @@ def main():
 
     message_data_listed = list(message_data)
     return render_template(
-        "index.html", s=session, msg_data=message_data_listed, usr_data=user_data
+        "index.html",
+        s=session,
+        msg_data=message_data_listed,
+        usr_data=user_data,
+        web_name=WEBSITE_NAME,
     )
 
 
@@ -192,6 +200,7 @@ def profile():
             form=form,
             session=session,
             data=user_data,
+            web_name=WEBSITE_NAME,
         )
 
     # Check if request contains data about file uploaded
@@ -213,7 +222,7 @@ def profile():
             return redirect(request.url)
 
         # Generate new random name for file that will be stored
-        picture_name = filename_generator()
+        picture_name = random_strings_generator()
 
         # Saving file to it's defined path
         with open(
@@ -284,7 +293,13 @@ def profile():
         session["username"] = username
         user_data = users.find_one(result.upserted_id)
 
-    return render_template("profile.html", form=form, session=session, data=user_data)
+    return render_template(
+        "profile.html",
+        form=form,
+        session=session,
+        data=user_data,
+        web_name=WEBSITE_NAME,
+    )
 
 
 @views_bp.route("/profile-picture", methods=["GET"])

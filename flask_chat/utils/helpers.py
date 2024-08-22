@@ -76,8 +76,8 @@ def verify_image(data):
 
 # To mitigate security risks, all the received files from client side
 # will be renamed to some random uuid
-def filename_generator():
-    """generate random filenames for uploaded files
+def random_strings_generator():
+    """generate random strings for filenames and other ids
 
     Returns:
         string: randomly generated uuid
