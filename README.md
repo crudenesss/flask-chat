@@ -1,4 +1,4 @@
-<p style="font-size:30px;" align=center><b>YappSpace</b></p>
+<p align=center><font size=6><b>YappSpace</b></font></p>
 <p align=center>simple private chatroom for multiple users to chat and have fun.<br>
 <i><b>*Currently in development stage</b></i></p>
 
