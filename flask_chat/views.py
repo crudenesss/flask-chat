@@ -9,11 +9,18 @@ from flask import (
     render_template,
     request,
     send_file,
-    session,
 )
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt_identity,
+    jwt_required,
+    set_access_cookies,
+    unset_jwt_cookies
+)
+from bson import ObjectId
 
 from models import db, insert_user
-from decorators import login_required, privilege_required
+from decorators import privilege_required
 from forms import RegForm, LogForm, EditProfileForm
 
 from utils.constants import (
@@ -37,11 +44,14 @@ logger = logging.getLogger("gunicorn.access")
 
 
 @views_bp.route("/", methods=["GET"])
-@login_required
+@jwt_required()
 def main():
     """Root page where the chat operates"""
 
     log_request()
+
+    user_id = get_jwt_identity()
+    logger.debug("Current user: %s", user_id)
 
     # Retrieve messages from database
     messages = db["messages"]
@@ -56,13 +66,12 @@ def main():
         message_data.collection,
     )
 
-    user_data = db["users"].find_one({"username": session.get("username")})
-    logger.debug("Info about user retrieved successfully")
+    user_data = db["users"].find_one({"_id": ObjectId(user_id)})
+    logger.debug("Info about user retrieved successfully: %s", user_data)
 
     message_data_listed = list(message_data)
     return render_template(
         "index.html",
-        s=session,
         msg_data=message_data_listed,
         usr_data=user_data,
         web_name=WEBSITE_NAME,
@@ -80,12 +89,12 @@ def register():
     form = RegForm(request.form)
 
     if request.method != "POST":
-        return render_template("register.html", form=form, session=session)
+        return render_template("register.html", form=form)
 
     # Here goes validating of WTForm inputs
     if not form.validate():
         logger.debug("Validation of registration form's input failed")
-        return render_template("register.html", form=form, session=session)
+        return render_template("register.html", form=form)
 
     # If everything's ok, retrieve inputs from form
     username = form.username.data
@@ -107,11 +116,11 @@ def register():
     result = insert_user(users, username, email, password)
     if not result:
         logger.debug("New user registration failed")
-        return render_template("error.html", session=session)
+        return render_template("error.html")
 
     logger.info("New user registration is completed successfully")
 
-    return render_template("verification.html", session=session)
+    return render_template("verification.html")
 
 
 # Login page route
@@ -125,11 +134,11 @@ def login():
     form = LogForm(request.form)
 
     if request.method != "POST":
-        return render_template("login.html", form=form, session=session)
+        return render_template("login.html", form=form)
 
     if not form.validate():
         logger.debug("Validation of registration form's input failed")
-        return render_template("login.html", form=form, session=session)
+        return render_template("login.html", form=form)
 
     username = form.username.data
     password = form.password.data
@@ -139,58 +148,72 @@ def login():
     # Check whether user exists in the database
     if not users.find_one({"username": username}):
         flash("Invalid username or password.")
-        return render_template("login.html", form=form, session=session)
+        return render_template("login.html", form=form)
 
     # Retrieve correct password hash
-    password_db = users.find_one({"username": username}).get("password")
+    user_data = users.find_one({"username": username})
 
     # Here goes verifying password hashes
-    if not password_verify(password_db, password):
+    if not password_verify(user_data.get("password"), password):
         flash("Invalid username or password.")
         logger.info("Login failed")
-        return render_template("login.html", form=form, session=session)
+        return render_template("login.html", form=form)
 
-    # Adding username to session, considering it as successful login,
+    # Creating session token for user, considering it as successful login,
     # redirecting to main page
-    session["username"] = username
+    response = redirect("/")
+    access_token = create_access_token(identity=str(user_data.get("_id")))
+    set_access_cookies(response, access_token)
 
     logger.info("Login successful.")
 
-    return redirect("/")
+    return response
 
 
 @views_bp.route("/logout")
-@login_required
+@jwt_required()
 def logout():
     """Logout function"""
 
     log_request()
-    session.pop("username", None)
+    response = redirect("/login")
+    unset_jwt_cookies(response)
+
     logger.info("User logged out")
 
-    return redirect("/login")
+    return response
 
 
-@views_bp.route("/profile", methods=["GET", "POST"])
-@login_required
-def profile():
+@views_bp.route("/profile/<user>", methods=["GET", "POST"])
+@jwt_required()
+def profile(user):
     """Display profile page"""
 
     log_request()
 
+    users = db["users"]
+
+    current_user = users.find_one({"_id": ObjectId(get_jwt_identity())}).get("username")
+    csrf_token = request.cookies.get("csrf_access_token")
+
+    logger.debug("Current user: %s", current_user)
+
     # Login form handle
     form = EditProfileForm(request.form)
 
-    # Retrieve info from database about current user
-    users = db["users"]
-    user_data = users.find_one({"username": session["username"]})
+    # Retrieve info from database about user
+
+    user_data = users.find_one({"username": user})
     logger.debug("Info about user retrieved successfully")
 
     if request.method != "POST":
 
         # Placeholder values from database to display in profile
         for field in form:
-            if user_data.get(field.name):
+            if field.name == "csrf_token":
+                logger.debug("CSRF token is set")
+                field.data = csrf_token
+            elif user_data.get(field.name):
                 field.data = user_data.get(field.name)
             else:
                 field.data = ""
@@ -198,7 +221,8 @@ def profile():
         return render_template(
             "profile.html",
             form=form,
-            session=session,
+            current_user=current_user,
+            csrf_token=csrf_token,
             data=user_data,
             web_name=WEBSITE_NAME,
         )
@@ -243,12 +267,13 @@ def profile():
         result = users.update_one(user_data, update_string)
         if not result:
             logger.debug("Data update failed")
-            return render_template("error.html", session=session)
+            return render_template("error.html")
 
         return render_template(
             "profile.html",
             form=form,
-            session=session,
+            current_user=current_user,
+            csrf_token=csrf_token,
             data=user_data,
         )
 
@@ -257,23 +282,30 @@ def profile():
         return redirect(request.url)
 
     username = form.username.data
-    email = form.email.data
 
     # Create dictionary for values that were changed
     newvalues = {}
 
-    for key, data in (("username", username), ("email", email)):
+    for key, data in ((field.name, field.data) for field in form if field.name != "csrf_token"):
+
+        # Check fields that may be repeatable
+        if key not in ["username", "email"]:
+            newvalues[key] = data
+            continue
+
+        # Check if provided data is the same as previous
         if data == user_data[key]:
             continue
 
-        # Check whether user tries to replace info with used credentials
+        # Check whether user tries to replace username/email with used credentials
         if users.find_one({key: data}):
             flash(f"This {data} is already in use.")
 
             return render_template(
                 "profile.html",
                 form=form,
-                session=session,
+                current_user=current_user,
+                csrf_token=csrf_token,
                 data=user_data,
             )
 
@@ -287,30 +319,22 @@ def profile():
         result = users.update_one(user_data, update_string)
         if not result:
             logger.debug("Data update failed")
-            return render_template("error.html", session=session)
+            return render_template("error.html")
 
         logger.info("User info updated successfully")
-        session["username"] = username
         user_data = users.find_one(result.upserted_id)
 
-    return render_template(
-        "profile.html",
-        form=form,
-        session=session,
-        data=user_data,
-        web_name=WEBSITE_NAME,
-    )
+    return redirect(f"/profile/{username}")
 
 
-@views_bp.route("/profile-picture", methods=["GET"])
-@login_required
-def profile_picture():
+@views_bp.route("/profile-picture/<user>", methods=["GET"])
+@jwt_required()
+def profile_picture(user):
     """Retrieve users' profile pictures"""
 
     log_request()
 
-    username = session.get("username")
-    profile_picture_name = db["users"].find_one({"username": username}).get("pp_name")
+    profile_picture_name = db["users"].find_one({"username": user}).get("pp_name")
 
     # Check if user has his profile picture set -
     # if not - return path with default picture

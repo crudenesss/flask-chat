@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    {% if data.username == session.username %}
+    {% if data.username == current_user %}
       <title>My Profile</title>
     {% else %}
       <title>{{ data.username }}</title>
@@ -43,13 +43,14 @@
   <body>
     <div>
       <img
-        src="{{ url_for('routes.profile_picture') }}"
+        src="{{ url_for('routes.profile_picture', user=data.username) }}"
         height="200"
         alt="Profile Photo"
       />
       <div>
         {% from "_form_macros.html" import render_field %}
-        <form method="post" action="/profile" enctype=multipart/form-data>
+        <form method="post" action="/profile/{{data.username}}" enctype=multipart/form-data>
+          {{ form.csrf_token }}
           <input
             id="pic-upload"
             style="display: none"
@@ -65,8 +66,8 @@
           <button id="save" style="display: none">Save Changes</button>
         </form>
         <div>
-          {% if session.username == data.username %}
-          <button onclick="toggleEdit()" id="switch">Edit Profile</button>
+          {% if current_user == data.username %}
+            <button onclick="toggleEdit()" id="switch">Edit Profile</button>
           {% endif %}
           <a href="/">Back to Chat</a>
         </div>

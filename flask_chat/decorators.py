@@ -1,28 +1,19 @@
 """Decorators used within application"""
 
 from functools import wraps
-from flask import redirect, session, abort
+from bson import ObjectId
+from flask import abort
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db
-
-
-def login_required(f):
-    """Checks if the user is logged in"""
-
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if "username" not in session.keys():
-            return redirect("/login")
-        return f(*args, **kwargs)
-
-    return decorated_function
 
 
 def privilege_required(f):
     """Forbid access for users with no privileges for resource"""
 
     @wraps(f)
+    @jwt_required()
     def decorated_function(*args, **kwargs):
-        role = db.users.find_one({"username": session.get("username")}).get("role")
+        role = db.users.find_one({"_id": ObjectId(get_jwt_identity())}).get("role")
         if role == "user":
             return abort(403)
         return f(*args, **kwargs)

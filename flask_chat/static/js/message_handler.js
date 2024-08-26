@@ -40,7 +40,7 @@ socket.on("load", function (msg) {
 socket.on("message", function (msg) {
   var timestamp = Date.now();
   var nestedDiv = $("<div>").append(
-    $("<p>").text(msg.username),
+    $(`<a href=/profile/${msg.username}>`).text(msg.username),
     $("<p>").text(msg.message),
     $("<p>").text(getTime(timestamp))
   );
@@ -48,6 +48,13 @@ socket.on("message", function (msg) {
   // adds received messages to list
   $("#messages").append(nestedDiv);
   messagesLoaded = (parseInt(messagesLoaded, 10) + 1).toString();
+});
+
+// triggered when message length is more than expected
+socket.on("message_too_long", function (msg_length) {
+  const messageDisplay = document.getElementById("msg-panel");
+  console.log(msg_length);
+  messageDisplay.textContent = `The limit of message length (${msg_length} symbols) is exceeded`;
 });
 
 // formats posix timestamp to normal date
@@ -70,13 +77,14 @@ function reqMessages() {
 }
 
 // sends messages to server with socket - the server log them into database
-function sendMessage(username) {
+function sendMessage() {
   var message = $("#m").val();
   if (message.trim() !== "") {
+
     socket.emit("message", {
-      message: message,
-      username: username,
+      message: message
     });
     $("#m").val("");
+    $("#msg-panel").val("");
   }
 }

@@ -1,6 +1,13 @@
 """WTforms used in application"""
 
-from wtforms import Form, StringField, PasswordField, validators, TextAreaField
+from wtforms import (
+    Form,
+    StringField,
+    PasswordField,
+    validators,
+    TextAreaField,
+    HiddenField,
+)
 from utils.constants import WEBSITE_NAME
 
 
@@ -10,6 +17,7 @@ class RegForm(Form):
     Args:
         Form (class): Form base class
     """
+
     username = StringField(
         "Username",
         [
@@ -18,12 +26,13 @@ class RegForm(Form):
                 min=5, max=32, message="Username must contain between 5 and 32 symbols"
             ),
             validators.Regexp(
-                "^[a-zA-Z0-9_]+$", 
-                message="Username must only contain Latin letters, numbers or underscores")
+                "^[a-zA-Z0-9_]+$",
+                message="Username must only contain Latin letters, numbers or underscores",
+            ),
         ],
         description=f"""Username is your unique name in {WEBSITE_NAME}.
             You can use Latin letters (both cases), numbers and underscores. 
-            Length must be 5-32 symbols."""
+            Length must be 5-32 symbols.""",
     )
     email = StringField("E-mail", [validators.DataRequired(), validators.Email()])
     password = PasswordField(
@@ -32,7 +41,9 @@ class RegForm(Form):
             validators.InputRequired(),
             validators.EqualTo("confirm", message="Passwords must match"),
             validators.Length(
-                min=8, max=128, message="Password must contain between 8 and 128 symbols"
+                min=8,
+                max=128,
+                message="Password must contain between 8 and 128 symbols",
             ),
         ],
     )
@@ -41,12 +52,15 @@ class RegForm(Form):
 
 class LogForm(Form):
     """Form to log in the app"""
+
     username = StringField("Username", [validators.InputRequired()])
     password = PasswordField("Password", [validators.InputRequired()])
 
 
 class EditProfileForm(Form):
     """Form to fast-edit info about user"""
+
+    csrf_token = HiddenField("Hidden", name="csrf_token")
     username = StringField(
         "Username",
         [
@@ -59,29 +73,18 @@ class EditProfileForm(Form):
         description=f"""Username is your unique name in {WEBSITE_NAME}.
             You can use Latin letters (both cases), numbers and underscores. 
             Length must be 5-32 symbols.""",
-        render_kw={'class': 'editable', 'readonly': True},
-        name="username"
+        render_kw={"class": "editable", "readonly": True},
+        name="username",
     )
     email = StringField(
         "E-mail",
         [validators.Email()],
-        render_kw={'class': 'editable', 'readonly': True},
-        name="email"
+        render_kw={"class": "editable", "readonly": True},
+        name="email",
     )
     bio = TextAreaField(
         "Bio",
-        [
-            validators.Length(max=256, message="The maximum of 256 symbols are allowed")
-        ],
-        render_kw={'class': 'editable', 'readonly': True},
-        name="bio"
-    )
-
-class MessageForm(Form):
-    """Form to handle messages within chat"""
-    message = TextAreaField(
-        [
-            validators.Length(max=4096, message="The maximum of 4096 symbols are allowed")
-        ],
-        name="message"
+        [validators.Length(max=256, message="The maximum of 256 symbols are allowed")],
+        render_kw={"class": "editable", "readonly": True},
+        name="bio",
     )

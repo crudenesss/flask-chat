@@ -1,5 +1,8 @@
 """Special configuration for logging with gunicorn"""
+from os import getenv
 from utils.filters import FilterDebug, IgnoreDebug
+
+LOG_LEVEL = getenv("LOG_LEVEL")
 
 # Define the logging configuration
 logconfig_dict = {
@@ -44,8 +47,13 @@ logconfig_dict = {
     "loggers": {
         "gunicorn.access": {
             "handlers": ["stdout", "stdout_debug"],
-            "level": "DEBUG",
+            "level": LOG_LEVEL,
             "propagate": False,
+        },
+        "setup": {
+            "handlers": ["stdout", "stdout_debug"],
+            "level": LOG_LEVEL,
+            "propagate": False
         },
         "pymongo.command": {
             "level": "INFO",
