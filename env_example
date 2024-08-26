@@ -11,6 +11,9 @@ APP_ADMINUSER=admin
 APP_ADMINEMAIL=example@mail.com
 APP_ADMINPASSWORD=examplepassword
 
-# Mongo misc info
+# Mongo misc properties
 MONGO_HOSTNAME=mongo
 MONGO_DATABASE=chat_db
+
+# Logging configuration
+LOGGING_LEVEL=DEBUG

@@ -13,11 +13,10 @@
   </head>
   <body>
     <ul>
-      <li><a href="/profile">Profile</a></li>
-      {% if usr_data.role == "admin" %}
-      <li><a href="/manage">Manage Chat</a></li>
+      <li><a href="/profile/{{ usr_data.username }}">Profile</a></li>
+      {% if usr_data.role != "user" %}
+        <li><a href="/manage">Manage Chat</a></li>
       {% endif %}
-      <li><a href="/settings/profile">Settings</a></li>
       <li><a href="/logout">Log out</a></li>
     </ul>
 
@@ -29,16 +28,13 @@
     <div id="messages">
       {% for msg in msg_data %}
       <div>
-        <p>{{ msg.username }}</p>
+        <p><a href="/profile/{{ msg.username }}">{{ msg.username }}</a></p>
         <p>{{ msg.message }}</p>
         <p class="timestamp" data-timestamp="{{ msg.timestamp }}"></p>
       </div>
       {% endfor %}
     </div>
-    <input id="m" autocomplete="off" /><button
-      onclick="sendMessage('{{ s.username }}')"
-    >
-      Send
-    </button>
+    <input id="m" autocomplete="off" /><button onclick="sendMessage()">Send</button>
+    <p id="msg-panel"></p>
   </body>
 </html>

@@ -1,15 +1,19 @@
 """initial script for database setup"""
 
 import logging
+from logging.config import dictConfig
 import os
 import time
 import sys
 from pymongo import MongoClient, errors
 
 from utils.helpers import password_hash
+from logging_config import logconfig_dict
+
 
 # Load logger
-logger = logging.getLogger("gunicorn.access")
+logger = logging.getLogger("setup")
+dictConfig(logconfig_dict)
 
 # Load environment variables
 mongo_hostname = os.getenv("MONGO_HOSTNAME")

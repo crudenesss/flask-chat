@@ -32,7 +32,7 @@ RUN groupadd --gid $GID $USERNAME \
 
 RUN chown -R $USERNAME:$USERNAME /app
 
-RUN mkdir $PP_PATH && chmod -R 600 $PP_PATH && chown -R $USERNAME:$USERNAME $PP_PATH
+RUN mkdir $PP_PATH && chmod -R 700 $PP_PATH && chown -R $USERNAME:$USERNAME $PP_PATH
 
 USER $USERNAME
 
