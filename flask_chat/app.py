@@ -9,7 +9,7 @@ from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 
 # from forms import MessageForm
-from utils.constants import MSG_LOAD_BATCH, MSG_LENGTH, SESSION_EXPIRY
+from utils.constants import MSG_LOAD_BATCH, MSG_MAX_LENGTH, SESSION_EXPIRY
 from views import views_bp
 from models import db, insert_message
 
@@ -67,10 +67,9 @@ def handle_message(msg):
     logger.debug("Message received")
 
     # If recevived message length is more than required
-    if len(msg.get("message")) > MSG_LENGTH:
+    if len(msg.get("message")) > MSG_MAX_LENGTH:
         logger.debug("Message length limit exceeded")
-        socket.emit("message_too_long", {"msg_length": MSG_LENGTH})
-        logger.debug("Event received")
+        socket.emit("message_too_long", {"msg_length": MSG_MAX_LENGTH})
         return
 
     # Getting the username of message sender

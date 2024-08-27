@@ -14,7 +14,7 @@ def privilege_required(f):
     @jwt_required()
     def decorated_function(*args, **kwargs):
         role = db.users.find_one({"_id": ObjectId(get_jwt_identity())}).get("role")
-        if role == "user":
+        if role not in ["admin", "mod"]:
             return abort(403)
         return f(*args, **kwargs)
 

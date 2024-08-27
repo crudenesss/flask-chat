@@ -10,10 +10,8 @@ from pymongo import MongoClient, errors
 from utils.helpers import password_hash
 from logging_config import logconfig_dict
 
-
 # Load logger
 logger = logging.getLogger("setup")
-dictConfig(logconfig_dict)
 
 # Load environment variables
 mongo_hostname = os.getenv("MONGO_HOSTNAME")
@@ -81,19 +79,23 @@ def add_system_user(db, usr, pwd):
     logger.info("Non-privileged user is added")
 
 
-client = maintain_connection(root_username, root_password, mongo_hostname)
-admin_db = client.admin
-if not find_user(admin_db, mongo_username):
-    logger.info("No additional user found, adding non-root")
-    add_system_user(admin_db, mongo_username, mongo_password)
+if __name__ == "__main__":
 
-client.close()
+    dictConfig(logconfig_dict)
 
-# Insert a user with the desired credentials
-client = maintain_connection(mongo_username, mongo_password, mongo_hostname)
-mongo_database = client[mongo_database]
+    client = maintain_connection(root_username, root_password, mongo_hostname)
+    admin_db = client.admin
+    if not find_user(admin_db, mongo_username):
+        logger.info("No additional user found, adding non-root")
+        add_system_user(admin_db, mongo_username, mongo_password)
 
-users = mongo_database.users.find_one({"role": "admin"})
-if not users:
-    insert_user(mongo_database, username, email, password)
-    logger.info("No in-app user found in database, added admin successfully!")
+    client.close()
+
+    # Insert a user with the desired credentials
+    client = maintain_connection(mongo_username, mongo_password, mongo_hostname)
+    mongo_database = client[mongo_database]
+
+    users = mongo_database.users.find_one({"role": "admin"})
+    if not users:
+        insert_user(mongo_database, username, email, password)
+        logger.info("No in-app user found in database, added admin successfully!")
