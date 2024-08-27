@@ -15,7 +15,7 @@ from flask_jwt_extended import (
     get_jwt_identity,
     jwt_required,
     set_access_cookies,
-    unset_jwt_cookies
+    unset_jwt_cookies,
 )
 from bson import ObjectId
 
@@ -26,6 +26,7 @@ from forms import RegForm, LogForm, EditProfileForm
 from utils.constants import (
     PROFILE_PICTURE_STORAGE_PATH,
     DEFAULT_PROFILE_PICTURE_PATH,
+    MSG_LOAD_BATCH,
     WEBSITE_NAME,
 )
 from utils.helpers import (
@@ -57,7 +58,9 @@ def main():
     messages = db["messages"]
     message_data = messages.find(
         skip=(
-            0 if messages.count_documents({}) < 5 else messages.count_documents({}) - 5
+            0
+            if messages.count_documents({}) < MSG_LOAD_BATCH
+            else messages.count_documents({}) - MSG_LOAD_BATCH
         )
     )
     logger.debug(
@@ -105,11 +108,8 @@ def register():
     users = db["users"]
 
     # Check whether user tries to register with used credentials
-    if users.find_one({"username": username}):
-        flash("This username is already in use.", category="username_error")
-        return redirect(request.url)
-    if users.find_one({"email": email}):
-        flash("This email is already in use.", category="email_error")
+    if users.find_one({"username": username}) and users.find_one({"email": email}):
+        flash("These credentials are already in use.")
         return redirect(request.url)
 
     # Make sure insertion is completed without errors
@@ -234,8 +234,6 @@ def profile(user):
         content_clean = content.read()
         content.seek(0)
 
-        logger.debug("file content: %s", content_clean)
-
         # Check if received file's content is empty or if file was not chosen
         if content_clean == b"":
             flash("Empty upload file provided.")
@@ -286,7 +284,9 @@ def profile(user):
     # Create dictionary for values that were changed
     newvalues = {}
 
-    for key, data in ((field.name, field.data) for field in form if field.name != "csrf_token"):
+    for key, data in (
+        (field.name, field.data) for field in form if field.name != "csrf_token"
+    ):
 
         # Check fields that may be repeatable
         if key not in ["username", "email"]:
@@ -299,7 +299,7 @@ def profile(user):
 
         # Check whether user tries to replace username/email with used credentials
         if users.find_one({key: data}):
-            flash(f"This {data} is already in use.")
+            flash("These credentials are already in use.")
 
             return render_template(
                 "profile.html",
