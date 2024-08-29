@@ -284,21 +284,23 @@ def profile(user):
     # Create dictionary for values that were changed
     newvalues = {}
 
-    for key, data in (
-        (field.name, field.data) for field in form if field.name != "csrf_token"
-    ):
+    for field in form:
+
+        # Exclude hidden csrf_token field from cycle
+        if field.name == "csrf_token":
+            continue
 
         # Check fields that may be repeatable
-        if key not in ["username", "email"]:
-            newvalues[key] = data
+        if field.name not in ["username", "email"]:
+            newvalues[field.name] = field.data
             continue
 
         # Check if provided data is the same as previous
-        if data == user_data[key]:
+        if field.data == user_data[field.name]:
             continue
 
         # Check whether user tries to replace username/email with used credentials
-        if users.find_one({key: data}):
+        if users.find_one({field.name: field.data}):
             flash("These credentials are already in use.")
 
             return render_template(
@@ -309,7 +311,7 @@ def profile(user):
                 data=user_data,
             )
 
-        newvalues[key] = data
+        newvalues[field.name] = field.data
 
     # Check whether the values need to be updated
     if len(newvalues) > 0:
