@@ -47,6 +47,13 @@ def verify_image(data):
 
     allowed_image_types = ["image/jpeg", "image/png"]
 
+    content_type = magic.from_buffer(data, mime=True)
+    if content_type not in allowed_image_types:
+        logger.error("Error while verifying image: signature does not match allowed formats")
+        return False
+
+    logger.debug("Signature is verified")
+
     try:
         image = Image.open(io.BytesIO(data))
         image.verify()
@@ -57,13 +64,6 @@ def verify_image(data):
     except OSError:
         logger.debug("Error while verifying image: the file is likely truncated")
         return False
-
-    content_type = magic.from_buffer(data, mime=True)
-    if content_type not in allowed_image_types:
-        logger.error("Error while verifying image: signature does not match allowed formats")
-        return False
-
-    logger.debug("Signature is verified")
 
     if any(x > y for x, y in zip((200, 200), image.size)):
 

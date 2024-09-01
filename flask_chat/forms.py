@@ -78,7 +78,7 @@ class EditProfileForm(Form):
     )
     email = StringField(
         "E-mail",
-        [validators.Email()],
+        [validators.DataRequired(), validators.Email()],
         render_kw={"class": "editable", "readonly": True},
         name="email",
     )

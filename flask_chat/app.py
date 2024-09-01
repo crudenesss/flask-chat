@@ -9,12 +9,13 @@ from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 
 # from forms import MessageForm
-from utils.constants import MSG_LOAD_BATCH, MSG_MAX_LENGTH, SESSION_EXPIRY
+from utils.constants import MSG_MAX_LENGTH, SESSION_EXPIRY
 from views import views_bp
-from models import db, insert_message
+from models import db, insert_message, retrieve_messages_readable
 
 # Define app
 app = Flask(__name__)
+app.debug = True
 
 # Define app configurations
 app.config["SECRET_KEY"] = getenv("FLASK_SECRET_KEY")
@@ -47,7 +48,7 @@ def unauthorized_loader_error(error):
 @jwt.expired_token_loader
 def expired_token_loader_error(token):
     """Custom handler for expired token provided when accesssing an endpoint"""
-    token_type = token['type']
+    token_type = token["type"]
     logger.debug("The %s token has expired", token_type)
     return redirect("/login")
 
@@ -73,7 +74,8 @@ def handle_message(msg):
         return
 
     # Getting the username of message sender
-    username = db["users"].find_one({"_id": ObjectId(get_jwt_identity())}).get("username")
+    user_id = get_jwt_identity()
+    username = db["users"].find_one({"_id": ObjectId(user_id)}).get("username")
     logger.debug("Current user: %s", username)
 
     # Retrieve message
@@ -84,7 +86,7 @@ def handle_message(msg):
     msg["username"] = username
 
     # Save to database
-    result = insert_message(messages, username, message)
+    result = insert_message(messages, user_id, message)
     if not result:
         logger.error("An error occured while handling message")
         return render_template("error.html")
@@ -117,26 +119,16 @@ def load_messages(cnt):
         return
 
     # retrieve 5 messages or whatever less that is remained
-    messages = db["messages"].find(
-        skip=(
-            0
-            if db["messages"].count_documents({}) < MSG_LOAD_BATCH + int(cnt)
-            else db["messages"].count_documents({}) - MSG_LOAD_BATCH - int(cnt)
-        ),
-        limit=(
-            db["messages"].count_documents({}) - int(cnt)
-            if db["messages"].count_documents({}) <= MSG_LOAD_BATCH + int(cnt)
-            else MSG_LOAD_BATCH
-        ),
-    )
-
-    logger.debug(
-        "%s messages retrieved from collection %s",
-        messages.retrieved,
-        messages.collection,
+    messages = retrieve_messages_readable(
+        db["messages"], initial_load=False, counter=int(cnt)
     )
 
     messages_listed = list(messages)
+
+    logger.debug(
+        "%s messages retrieved from collection.",
+        len(messages_listed)
+    )
 
     # sort messages in reversed order by date to send via socket event one by one
     for msg in sorted(messages_listed, key=lambda x: x["_id"], reverse=True):
