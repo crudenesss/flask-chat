@@ -4,6 +4,7 @@ import os
 import logging
 from flask import (
     Blueprint,
+    abort,
     flash,
     redirect,
     render_template,
@@ -19,14 +20,13 @@ from flask_jwt_extended import (
 )
 from bson import ObjectId
 
-from models import db, insert_user
+from models import db, insert_user, retrieve_messages_readable
 from decorators import privilege_required
 from forms import RegForm, LogForm, EditProfileForm
 
 from utils.constants import (
     PROFILE_PICTURE_STORAGE_PATH,
     DEFAULT_PROFILE_PICTURE_PATH,
-    MSG_LOAD_BATCH,
     WEBSITE_NAME,
 )
 from utils.helpers import (
@@ -55,27 +55,19 @@ def main():
     logger.debug("Current user: %s", user_id)
 
     # Retrieve messages from database
-    messages = db["messages"]
-    message_data = messages.find(
-        skip=(
-            0
-            if messages.count_documents({}) < MSG_LOAD_BATCH
-            else messages.count_documents({}) - MSG_LOAD_BATCH
-        )
-    )
+    message_data = retrieve_messages_readable(db["messages"])
+
     logger.debug(
-        "%s messages retrieved from collection '%s'.",
-        message_data.retrieved,
-        message_data.collection,
+        "%s messages retrieved from collection 'messages'.",
+        len(message_data)
     )
 
     user_data = db["users"].find_one({"_id": ObjectId(user_id)})
     logger.debug("Info about user retrieved successfully: %s", user_data)
 
-    message_data_listed = list(message_data)
     return render_template(
         "index.html",
-        msg_data=message_data_listed,
+        msg_data=message_data,
         usr_data=user_data,
         web_name=WEBSITE_NAME,
     )
@@ -108,7 +100,7 @@ def register():
     users = db["users"]
 
     # Check whether user tries to register with used credentials
-    if users.find_one({"username": username}) and users.find_one({"email": email}):
+    if users.find_one({"username": username}) or users.find_one({"email": email}):
         flash("These credentials are already in use.")
         return redirect(request.url)
 
@@ -120,7 +112,7 @@ def register():
 
     logger.info("New user registration is completed successfully")
 
-    return render_template("verification.html")
+    return redirect("/login")
 
 
 # Login page route
@@ -193,7 +185,8 @@ def profile(user):
 
     users = db["users"]
 
-    current_user = users.find_one({"_id": ObjectId(get_jwt_identity())}).get("username")
+    user_id = get_jwt_identity()
+    current_user = users.find_one({"_id": ObjectId(user_id)}).get("username")
     csrf_token = request.cookies.get("csrf_access_token")
 
     logger.debug("Current user: %s", current_user)
@@ -203,8 +196,11 @@ def profile(user):
 
     # Retrieve info from database about user
 
-    user_data = users.find_one({"username": user})
+    if not users.find_one({"username": user}):
+        return abort(404)
+
     logger.debug("Info about user retrieved successfully")
+    user_data = users.find_one({"username": user})
 
     if request.method != "POST":
 
@@ -215,6 +211,7 @@ def profile(user):
                 field.data = csrf_token
             elif user_data.get(field.name):
                 field.data = user_data.get(field.name)
+            # If the field from user's document is empty
             else:
                 field.data = ""
 

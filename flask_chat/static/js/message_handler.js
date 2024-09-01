@@ -26,7 +26,7 @@ socket.on("loading_finished", function () {
 // receives group of messages with "load more" button
 socket.on("load", function (msg) {
   var nestedDiv = $("<div>").append(
-    $("<p>").text(msg.username),
+    $(`<a href=/profile/${msg.username}>`).text(msg.username),
     $("<p>").text(msg.message),
     $("<p>").text(getTime(parseFloat(msg.timestamp) * 1000))
   );

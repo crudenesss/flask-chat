@@ -8,7 +8,7 @@ PROFILE_PICTURE_STORAGE_PATH = "/profile_pictures"
 DEFAULT_PROFILE_PICTURE_PATH = "./static/images/default.jpg"
 
 # Chat propertires
-MSG_LOAD_BATCH = 20
+MSG_LOAD_BATCH = 5
 MSG_MAX_LENGTH = 4096
 
 # Session token expiry (in seconds)

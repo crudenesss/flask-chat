@@ -2,7 +2,7 @@
 from os import getenv
 from utils.filters import FilterDebug, IgnoreDebug
 
-LOG_LEVEL = getenv("LOG_LEVEL")
+LOG_LEVEL = getenv("LOGGING_LEVEL")
 
 # Define the logging configuration
 logconfig_dict = {
