@@ -3,11 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    {% if data.username == current_user %}
-      <title>My Profile</title>
-    {% else %}
-      <title>{{ data.username }}</title>
-    {% endif %}
+    <title>My Profile</title>
     <script>
       let dbValues = {};
       function toggleEdit() {
@@ -49,7 +45,7 @@
       />
       <div>
         {% from "_form_macros.html" import render_field %}
-        <form method="post" action="/profile/{{data.username}}" enctype=multipart/form-data>
+        <form method="post" action="/myprofile" enctype=multipart/form-data>
           {{ form.csrf_token }}
           <input
             id="pic-upload"
@@ -70,6 +66,7 @@
             <button onclick="toggleEdit()" id="switch">Edit Profile</button>
           {% endif %}
           <a href="/">Back to Chat</a>
+          <a href="/profile/{{data.username}}">Switch to public view</a>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %} {% if
