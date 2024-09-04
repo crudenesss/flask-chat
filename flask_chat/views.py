@@ -57,10 +57,7 @@ def main():
     # Retrieve messages from database
     message_data = retrieve_messages_readable(db["messages"])
 
-    logger.debug(
-        "%s messages retrieved from collection 'messages'.",
-        len(message_data)
-    )
+    logger.debug("%s messages retrieved from collection 'messages'.", len(message_data))
 
     user_data = db["users"].find_one({"_id": ObjectId(user_id)})
     logger.debug("Info about user retrieved successfully: %s", user_data)
@@ -176,9 +173,9 @@ def logout():
     return response
 
 
-@views_bp.route("/profile/<user>", methods=["GET", "POST"])
+@views_bp.route("/myprofile", methods=["GET", "POST"])
 @jwt_required()
-def profile(user):
+def profile():
     """Display profile page"""
 
     log_request()
@@ -186,21 +183,18 @@ def profile(user):
     users = db["users"]
 
     user_id = get_jwt_identity()
-    current_user = users.find_one({"_id": ObjectId(user_id)}).get("username")
-    csrf_token = request.cookies.get("csrf_access_token")
-
-    logger.debug("Current user: %s", current_user)
-
-    # Login form handle
-    form = EditProfileForm(request.form)
 
     # Retrieve info from database about user
+    user_data = users.find_one({"_id": ObjectId(user_id)})
 
-    if not users.find_one({"username": user}):
-        return abort(404)
+    current_user = user_data.get("username")
+    logger.debug("Current user: %s", current_user)
 
-    logger.debug("Info about user retrieved successfully")
-    user_data = users.find_one({"username": user})
+    # Get csrf token to put in rendered form
+    csrf_token = request.cookies.get("csrf_access_token")
+
+    # Edit profile form handle
+    form = EditProfileForm(request.form)
 
     if request.method != "POST":
 
@@ -276,8 +270,6 @@ def profile(user):
         logger.debug("Validation of profile edit form's input failed")
         return redirect(request.url)
 
-    username = form.username.data
-
     # Create dictionary for values that were changed
     newvalues = {}
 
@@ -323,7 +315,34 @@ def profile(user):
         logger.info("User info updated successfully")
         user_data = users.find_one(result.upserted_id)
 
-    return redirect(f"/profile/{username}")
+    return redirect("/myprofile")
+
+
+@views_bp.route("/profile/<user>", methods=["GET"])
+@jwt_required()
+def public_profile(user):
+    """Display profile page in public mode"""
+
+    log_request()
+
+    user_id = get_jwt_identity()
+    current_user = db["users"].find_one({"_id": ObjectId(user_id)}).get("username")
+
+    logger.debug("Current user: %s", current_user)
+
+    if not db["users"].find_one({"username": user}):
+        logger.debug("The username profile that was tried to access does not exist")
+        return abort(404)
+
+    logger.debug("Info about user retrieved successfully")
+    user_data = db["users"].find_one({"username": user})
+
+    return render_template(
+        "profile_public.html",
+        current_user=current_user,
+        data=user_data,
+        web_name=WEBSITE_NAME,
+    )
 
 
 @views_bp.route("/profile-picture/<user>", methods=["GET"])
