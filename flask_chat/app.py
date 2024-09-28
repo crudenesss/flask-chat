@@ -3,26 +3,28 @@
 import logging
 from os import getenv
 from datetime import timedelta
-from bson import ObjectId
 from flask import Flask, redirect, render_template
 from flask_socketio import SocketIO
 from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 
 # from forms import MessageForm
 from utils.constants import MSG_MAX_LENGTH, SESSION_EXPIRY
+from services import UserService, MessageService
 from views import views_bp
-from models import db, insert_message, retrieve_messages_readable
 
 # Define app
 app = Flask(__name__)
 app.debug = True
 
 # Define app configurations
+# JWT
 app.config["SECRET_KEY"] = getenv("FLASK_SECRET_KEY")
-app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(seconds=SESSION_EXPIRY)
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_CSRF_CHECK_FORM"] = True
+
+# Content validation
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
 app.register_blueprint(views_bp)
 
@@ -35,6 +37,10 @@ jwt = JWTManager(app)
 jwt.init_app(app)
 
 logger = logging.getLogger("gunicorn.access")
+
+# Init custom services
+user_service = UserService()
+message_service = MessageService()
 
 
 # Custom exceptions for error responses
@@ -65,8 +71,6 @@ def invalid_token_loader_error(error):
 def handle_message(msg):
     """handle initial messages sent via websocket and saves them to database"""
 
-    logger.debug("Message received")
-
     # If recevived message length is more than required
     if len(msg.get("message")) > MSG_MAX_LENGTH:
         logger.debug("Message length limit exceeded")
@@ -75,18 +79,19 @@ def handle_message(msg):
 
     # Getting the username of message sender
     user_id = get_jwt_identity()
-    username = db["users"].find_one({"_id": ObjectId(user_id)}).get("username")
+
+    username = user_service.get_user_by_id(user_id).username
     logger.debug("Current user: %s", username)
 
     # Retrieve message
     message = msg.get("message")
-    messages = db["messages"]
+    logger.debug("Message received: %s", message)
 
     # Append username info to pass through socket
     msg["username"] = username
 
     # Save to database
-    result = insert_message(messages, user_id, message)
+    result = message_service.insert_message(message, user_id)
     if not result:
         logger.error("An error occured while handling message")
         return render_template("error.html")
@@ -114,27 +119,22 @@ def load_messages(cnt):
         return
 
     # if no messages to load remain sends event via socket
-    if db["messages"].count_documents({}) <= int(cnt):
+    if message_service.count() <= int(cnt):
         socket.emit("loading_finished")
         return
 
-    # retrieve 5 messages or whatever less that is remained
-    messages = retrieve_messages_readable(
-        db["messages"], initial_load=False, counter=int(cnt)
+    # retrieve batch of messages or whatever less that is remained
+    messages = message_service.retrieve_messages(
+        initial_load=False, counter=int(cnt), jsonify=True
     )
 
-    messages_listed = list(messages)
-
-    logger.debug(
-        "%s messages retrieved from collection.",
-        len(messages_listed)
-    )
+    logger.debug("%s messages retrieved from collection.", len(messages))
 
     # sort messages in reversed order by date to send via socket event one by one
-    for msg in sorted(messages_listed, key=lambda x: x["_id"], reverse=True):
+    for msg in sorted(messages, key=lambda x: x.message_timestamp, reverse=True):
         message = {
-            "username": msg["username"],
-            "message": msg["message"],
-            "timestamp": str(msg["timestamp"]),
+            "username": msg.username,
+            "message": msg.message_content,
+            "timestamp": str(msg.message_timestamp),
         }
         socket.emit("load", message)

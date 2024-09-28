@@ -1,19 +1,15 @@
 services:
 
-  mongodb:
-    container_name: mongo
-    image: mongo:7.0.12
+  postgres:
+    container_name: postgresql
+    image: postgres:latest
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping').ok", "--quiet"]
-      interval: 10s
-      timeout: 30s
-      retries: 3
+      - POSTGRES_USERNAME=${POSTGRES_USERNAME}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - PGDATABASE=${PGDATABASE}
     volumes:
-      - mongodb-data:/data/db
-    command: [--auth]
+      - postgres-data:/var/lib/postgresql/data
+      - ./setup/scripts/setup.sh:/docker-entrypoint-initdb.d/setup.sh
     networks:
       - app-network
 
@@ -23,8 +19,8 @@ services:
       context: .
     image: crudenesss/yapp-space
     depends_on:
-      mongodb: 
-        condition: service_healthy
+      postgres:
+        condition: service_started
     env_file:
       - .env
     ports:
@@ -36,13 +32,13 @@ services:
 
 networks:
   app-network:
+    name: app-network
     driver: bridge
 
 volumes:
   profile-picture-storage:
     driver: local
     name: profile-picture-storage
-  mongodb-data:
+  postgres-data:
     driver: local
-    name: mongodb-data
-  
+    name: postgres-data

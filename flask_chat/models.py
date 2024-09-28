@@ -1,120 +1,115 @@
-"""functions to work with database"""
+"""models connecting to database"""
 
-import datetime
 import logging
-import os
-from bson import ObjectId
-from pymongo import MongoClient, errors
-
-from utils.constants import MSG_LOAD_BATCH
-
-# Define constants
-MONGO_USERNAME = os.getenv("MONGO_USERNAME")
-MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
-MONGO_HOSTNAME = os.getenv("MONGO_HOSTNAME")
-MONGO_DATABASE = os.getenv("MONGO_DATABASE")
+from typing import Optional
+from argon2 import PasswordHasher, exceptions
+from sqlalchemy import String, ForeignKey, Boolean
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 logger = logging.getLogger("gunicorn.access")
 
-# Init database connection and get app database handle
-try:
-    client = MongoClient(
-        f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_HOSTNAME}:27017/"
+
+class Base(DeclarativeBase):
+    """DeclarativeBase class wrapped around"""
+
+
+class Role(Base):
+    """Role model"""
+
+    __tablename__ = "roles"
+
+    role_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    role_name: Mapped[str] = mapped_column(String(64))
+
+
+class User(Base):
+    """User model"""
+
+    __tablename__ = "users"
+
+    user_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    username: Mapped[str] = mapped_column(String(32))
+    passwd: Mapped[str] = mapped_column(String(256))
+    email: Mapped[str] = mapped_column(String(320))
+    bio: Mapped[Optional[str]] = mapped_column(String(256))
+    profile_picture: Mapped[Optional[str]] = mapped_column(String(128))
+    role_id: Mapped[str] = mapped_column(
+        String(32), ForeignKey("roles.role_id", ondelete="RESTRICT", onupdate="CASCADE")
     )
-    db = client[MONGO_DATABASE]
-    logger.info("Connection is to database is maintained")
-except errors.PyMongoError as err:
-    logger.error("An error occured while maintaining connection to database: %s", err)
+
+    usr_role_id: Mapped[Role] = relationship("Role", foreign_keys=[role_id])
+
+    def set_password(self, plain_password):
+        """Secures User's password with argon2 hashing algorithm.
+
+        ## Parameters:
+            **plain_password** (_str_):
+            password in plaintext
+
+        ### Returns:
+            **str**:
+            hashed password with algorithm argon2
+        """
+        ph = PasswordHasher()
+        hashed_password = ph.hash(plain_password)
+        self.passwd = hashed_password
+        return hashed_password
+
+    def verify_password(self, plain_password):
+        """Verify User's password hash.
+
+        ## Parameters:
+            **plain_password** (_str_):
+            password in plaintext
+
+        ### Returns:
+            _bool_:
+            _True_ if password is verified successfully, otherwise _False_.
+        """
+        ph = PasswordHasher()
+        try:
+            return ph.verify(self.passwd, plain_password)
+        except exceptions.Argon2Error:
+            logger.error("Password hash verification failed")
+            return False
+
+    def is_privileged(self):
+        """Check whether user within User model has privileged role.
+
+        #### Returns:
+            **bool**:
+            _True_ if user is privileged, otherwise _False_.
+        """
+        return self.role_id in ["admin", "mod"]
+
+    def to_json(self):
+        """Represent User class as JSON.
+
+        Returns:
+            _str_: JSON string that contains all User class parameters defined.
+        """
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
-def insert_user(collection, username, email, password):
-    """add document with user info"""
-    user_data = {
-        "username": username,
-        "email": email,
-        "role": "user",
-        "password": password,
-    }
-    try:
-        collection.insert_one(user_data)
-        logger.debug("1 user inserted in a database")
-        return True
-    except errors.PyMongoError as e:
-        logger.error("Failed to insert user in a database: %s", e)
-        return False
+class Message(Base):
+    """Message model"""
 
+    __tablename__ = "messages"
 
-def insert_message(collection, user_id, message_text):
-    """add document with message data"""
-    message_data = {
-        "fk_user_id": ObjectId(user_id),
-        "message": message_text,
-        "timestamp": datetime.datetime.now().timestamp(),
-    }
-    try:
-        collection.insert_one(message_data)
-        logger.debug("1 message inserted in a database")
-        return True
-    except errors.PyMongoError as e:
-        logger.error("Failed to insert message in a database: %s", e)
-        return False
+    message_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    message_content: Mapped[str] = mapped_column(String(4096))
+    message_timestamp: Mapped[str] = mapped_column(String(32))
+    message_edited: Mapped[bool] = mapped_column(Boolean(), default=False)
+    user_id: Mapped[str] = mapped_column(
+        String(80), ForeignKey("users.user_id", onupdate="CASCADE")
+    )
 
+    msg_user_id: Mapped[str] = relationship("User", foreign_keys=[user_id])
 
-def retrieve_messages_readable(collection, initial_load=True, counter=None):
-    """Retrieve messages from database ready to be rendered on page
+    def to_json(self):
+        """Represent Message class as JSON.
 
-    Args:
-        collection (Collection): instance of MongoDB collection
-        initial_load (bool, optional): _True_ is for when application is accessing collection
-            initially i.e. when it is needed to load only newest batch of messages. 
-            Defaults to _True_.
-        counter (int, optional): Counter of already loaded messages. Applies only if `inital_load`
-            is set to _False_. Defaults to _None_.
-
-    Returns:
-        CommandCursor: retrieved messages with easily rendered parameters
-    """
-    pipeline = [
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "fk_user_id",
-                "foreignField": "_id",
-                "as": "user_info",
-            }
-        },
-        {
-            "$project": {
-                "_id": 1,
-                "fk_user_id": 1,
-                "username": "$user_info.username",
-                "message": 1,
-                "timestamp": 1,
-            }
-        },
-        { "$unwind": "$username" }
-    ]
-
-    if initial_load:
-        if collection.count_documents({}) > MSG_LOAD_BATCH:
-            pipeline.append(
-                {"$skip": collection.count_documents({}) - MSG_LOAD_BATCH}
-            )
-    else:
-        # Set documents to skip value
-        if collection.count_documents({}) > MSG_LOAD_BATCH + counter:
-            pipeline.append(
-                {"$skip": collection.count_documents({}) - MSG_LOAD_BATCH - counter}
-            )
-        # Set documents output to limit
-        if collection.count_documents({}) <= MSG_LOAD_BATCH + counter:
-            pipeline.append(
-                {"$limit": collection.count_documents({}) - counter}
-            )
-        else:
-            pipeline.append(
-                {"$limit": MSG_LOAD_BATCH}
-            )
-
-    results = collection.aggregate(pipeline)
-    return list(results)
+        Returns:
+            _str_: JSON string that contains all Message class parameters defined.
+        """
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}

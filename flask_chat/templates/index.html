@@ -29,8 +29,8 @@
       {% for msg in msg_data %}
       <div>
         <p><a href="/profile/{{ msg.username }}">{{ msg.username }}</a></p>
-        <p>{{ msg.message }}</p>
-        <p class="timestamp" data-timestamp="{{ msg.timestamp }}"></p>
+        <p>{{ msg.message_content }}</p>
+        <p class="timestamp" data-timestamp="{{ msg.message_timestamp }}"></p>
       </div>
       {% endfor %}
     </div>

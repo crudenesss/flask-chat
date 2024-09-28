@@ -18,9 +18,8 @@ from flask_jwt_extended import (
     set_access_cookies,
     unset_jwt_cookies,
 )
-from bson import ObjectId
 
-from models import db, insert_user, retrieve_messages_readable
+from services import UserService, MessageService
 from decorators import privilege_required
 from forms import RegForm, LogForm, EditProfileForm
 
@@ -30,8 +29,6 @@ from utils.constants import (
     WEBSITE_NAME,
 )
 from utils.helpers import (
-    password_hash,
-    password_verify,
     random_strings_generator,
     log_request,
     verify_image,
@@ -42,6 +39,10 @@ views_bp = Blueprint("routes", __name__)
 
 # Init root logger
 logger = logging.getLogger("gunicorn.access")
+
+# Init custom services
+user_service = UserService()
+message_service = MessageService()
 
 
 @views_bp.route("/", methods=["GET"])
@@ -55,11 +56,11 @@ def main():
     logger.debug("Current user: %s", user_id)
 
     # Retrieve messages from database
-    message_data = retrieve_messages_readable(db["messages"])
+    message_data = message_service.retrieve_messages(jsonify=True)
 
     logger.debug("%s messages retrieved from collection 'messages'.", len(message_data))
 
-    user_data = db["users"].find_one({"_id": ObjectId(user_id)})
+    user_data = user_service.get_user_by_id(user_id).to_json()
     logger.debug("Info about user retrieved successfully: %s", user_data)
 
     return render_template(
@@ -91,18 +92,15 @@ def register():
     # If everything's ok, retrieve inputs from form
     username = form.username.data
     email = form.email.data
-    password = password_hash(form.password.data)
-
-    # Get collection's handler where we store data about registered users
-    users = db["users"]
+    password = form.password.data
 
     # Check whether user tries to register with used credentials
-    if users.find_one({"username": username}) or users.find_one({"email": email}):
+    if user_service.get_user_info(username=username) or user_service.get_user_info(email=email):
         flash("These credentials are already in use.")
         return redirect(request.url)
 
     # Make sure insertion is completed without errors
-    result = insert_user(users, username, email, password)
+    result = user_service.insert_user(username, password, email)
     if not result:
         logger.debug("New user registration failed")
         return render_template("error.html")
@@ -132,18 +130,15 @@ def login():
     username = form.username.data
     password = form.password.data
 
-    users = db["users"]
-
     # Check whether user exists in the database
-    if not users.find_one({"username": username}):
+    if not user_service.get_user_info(username=username):
         flash("Invalid username or password.")
         return render_template("login.html", form=form)
 
-    # Retrieve correct password hash
-    user_data = users.find_one({"username": username})
+    [user_data] = user_service.get_user_info(username=username)
 
     # Here goes verifying password hashes
-    if not password_verify(user_data.get("password"), password):
+    if not user_data.verify_password(password):
         flash("Invalid username or password.")
         logger.info("Login failed")
         return render_template("login.html", form=form)
@@ -151,7 +146,7 @@ def login():
     # Creating session token for user, considering it as successful login,
     # redirecting to main page
     response = redirect("/")
-    access_token = create_access_token(identity=str(user_data.get("_id")))
+    access_token = create_access_token(identity=str(user_data.user_id))
     set_access_cookies(response, access_token)
 
     logger.info("Login successful.")
@@ -180,12 +175,10 @@ def profile():
 
     log_request()
 
-    users = db["users"]
-
     user_id = get_jwt_identity()
 
     # Retrieve info from database about user
-    user_data = users.find_one({"_id": ObjectId(user_id)})
+    user_data = user_service.get_user_by_id(user_id).to_json()
 
     current_user = user_data.get("username")
     logger.debug("Current user: %s", current_user)
@@ -251,9 +244,7 @@ def profile():
             logger.debug("previous picture is removed")
 
         # Update profile picture filename in database
-        update_string = {"$set": {"pp_name": picture_name}}
-
-        result = users.update_one(user_data, update_string)
+        result = user_service.update_user(user_id, profile_picture=picture_name)
         if not result:
             logger.debug("Data update failed")
             return render_template("error.html")
@@ -279,17 +270,19 @@ def profile():
         if field.name == "csrf_token":
             continue
 
+        # Check if provided data is the same as previous
+        if field.data == user_data[field.name]:
+            continue
+
         # Check fields that may be repeatable
         if field.name not in ["username", "email"]:
             newvalues[field.name] = field.data
             continue
 
-        # Check if provided data is the same as previous
-        if field.data == user_data[field.name]:
-            continue
+        kwargs = {field.name: field.data}
 
         # Check whether user tries to replace username/email with used credentials
-        if users.find_one({field.name: field.data}):
+        if user_service.get_user_info(**kwargs)[0]:
             flash("These credentials are already in use.")
 
             return render_template(
@@ -305,15 +298,14 @@ def profile():
     # Check whether the values need to be updated
     if len(newvalues) > 0:
         logger.debug("Values to update: %s", len(newvalues))
-        update_string = {"$set": newvalues}
 
-        result = users.update_one(user_data, update_string)
+        result = user_service.update_user(user_id, update_dict=newvalues)
         if not result:
             logger.debug("Data update failed")
             return render_template("error.html")
 
         logger.info("User info updated successfully")
-        user_data = users.find_one(result.upserted_id)
+        user_data = user_service.get_user_by_id(user_id)
 
     return redirect("/myprofile")
 
@@ -326,16 +318,17 @@ def public_profile(user):
     log_request()
 
     user_id = get_jwt_identity()
-    current_user = db["users"].find_one({"_id": ObjectId(user_id)}).get("username")
+    current_user = user_service.get_user_by_id(user_id).username
 
     logger.debug("Current user: %s", current_user)
 
-    if not db["users"].find_one({"username": user}):
+    # Check whether user exists. If not, throw 404
+    if not user_service.get_user_info(username=user):
         logger.debug("The username profile that was tried to access does not exist")
         return abort(404)
 
     logger.debug("Info about user retrieved successfully")
-    user_data = db["users"].find_one({"username": user})
+    user_data = user_service.get_user_info(username=user)[0].to_json()
 
     return render_template(
         "profile_public.html",
@@ -352,7 +345,7 @@ def profile_picture(user):
 
     log_request()
 
-    profile_picture_name = db["users"].find_one({"username": user}).get("pp_name")
+    profile_picture_name = user_service.get_user_info(username=user)[0].profile_picture
 
     # Check if user has his profile picture set -
     # if not - return path with default picture

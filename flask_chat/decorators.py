@@ -1,10 +1,9 @@
 """Decorators used within application"""
 
 from functools import wraps
-from bson import ObjectId
 from flask import abort
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from models import db
+from services import UserService
 
 
 def privilege_required(f):
@@ -13,8 +12,9 @@ def privilege_required(f):
     @wraps(f)
     @jwt_required()
     def decorated_function(*args, **kwargs):
-        role = db.users.find_one({"_id": ObjectId(get_jwt_identity())}).get("role")
-        if role not in ["admin", "mod"]:
+        user_service = UserService()
+        [user] = user_service.get_user_by_id(get_jwt_identity())
+        if user.is_privileged():
             return abort(403)
         return f(*args, **kwargs)
 

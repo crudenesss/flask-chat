@@ -1,4 +1,5 @@
 """Special configuration for logging with gunicorn"""
+
 from os import getenv
 from utils.filters import FilterDebug, IgnoreDebug
 
