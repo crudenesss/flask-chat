@@ -63,13 +63,15 @@ Listing of frameworks, tools and other stuff used in this project.
 - **Package management:** Poetry
 - **Web-Sockets:** Flask-SocketIO
 - built-in **logging** framework
-- **Database connector:** PyMongo
+- **Sessions:** Flask-JWT-Extended
+- **Other:** WTForms, argon2
+- **ORM:** SQLAlchemy
 
 #### Deployment
 - **Orchestration:** Docker compose
 - **Application deployment:** Gunicorn
 
-#### Database: MongoDB
+#### Database: PostgreSQL
 
 ## Roadmap
 
