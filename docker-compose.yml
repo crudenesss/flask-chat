@@ -2,7 +2,7 @@ services:
 
   postgres:
     container_name: postgresql
-    image: postgres:latest
+    image: postgres:16
     environment:
       - POSTGRES_USERNAME=${POSTGRES_USERNAME}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
