@@ -10,8 +10,8 @@ class FilterDebug(logging.Filter):
         return record.levelname == "DEBUG"
 
 
-class IgnoreDebug(logging.Filter):
+class FilterInfo(logging.Filter):
     """Only records with level above DEBUG can pass"""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno >= 20
+        return record.levelname == "INFO"
