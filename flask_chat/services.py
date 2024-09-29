@@ -36,12 +36,12 @@ class UserService:
         """Return User object by its identifier.
 
         ## Parameters:
-            identity (_str_):
+            **identity** (_str_):
             User unique identifier.
 
         ### Returns:
             _User_:
-            User object.
+            User object. _None_ if exception caught.
         """
         try:
             session = self.session()
@@ -58,7 +58,7 @@ class UserService:
 
         ### Returns:
             _List\[User\]_:
-            list of User objects.
+            list of User objects. _None_ if an exception is caught.
         """
         try:
             session = self.session()
@@ -76,21 +76,21 @@ class UserService:
             return None
 
     def insert_user(self, username, password, email):
-        """Insert row in a database which with all user info provided
+        """Insert row in a database which with all user info provided.
 
         ## Parameters:
             **username** (_str_): 
-            Username to insert.
+            Username to insert. <br>
 
             **password** (_str_): 
-            Plain text password. Will be hashed with argon2 algorithm. 
+            Plain text password. Will be hashed with argon2 algorithm. <br>
 
             **email** (_str_): 
             Email.
 
         ### Returns:
-            _type_:
-            Acknowledgement of operation.
+            _bool_:
+            _True_ if operation is successful, otherwise _False_.
         """
         try:
             session = self.session()
@@ -163,7 +163,8 @@ class MessageService:
         self.session = sessionmaker(engine)
 
     def count(self):
-        """Return total count of messages stored in database.
+        """Return total count of messages stored in database. Return _None_
+        if exception is caught.
         """
         try:
             session = self.session()
@@ -175,17 +176,18 @@ class MessageService:
             return None
 
     def insert_message(self, message, user_id):
-        """_summary_
+        """Insert all provided message info to database.
 
         ## Parameters:
             **message_content** (_str_): 
-            Message to be inserted.
+            Message to be inserted. <br>
 
             **user_id** (_str_): 
             Author's unique identifier.
 
         ### Returns:
-            _type_: _description_
+            _bool_:
+            _True_ if insert operation is completed successfully, otherwise _False_.
         """
         try:
             session = self.session()
@@ -209,18 +211,22 @@ class MessageService:
         r"""Retrieve messages from database ready to be rendered on page.
 
         ## Parameters:
-            **initial_load** (_bool_, optional): \
-            Apply _True_ when application is accessing rows
-            initially i.e. when it is needed to load only newest batch of messages,
+            **initial_load** (_bool_, optional):
+            Set _True_ when application is accessing rows initially i.e. 
+            when it is needed to load only newest batch of messages,
             otherwise parameter needs to be specified as _False_. 
             Defaults to _True_. <br>
 
             **counter** (_str_, optional): 
             Counter of already loaded messages. Applies only if `inital_load`
-            is set to _False_. Defaults to _None_.
+            is set to _False_. Defaults to _None_. <br>
+
+            **jsonify** (bool, optional): 
+            Set this option to _True_ additionally if it is needed to return 
+            JSON representation on an object. Defaults to False.
 
         ### Returns:
-            _List\[Row\[Tuple\[Message, User\]\]\]_: 
+            _List\[Row\[Tuple\[Message, User\]\]\]_ | _dict_: 
             retrieved messages as join result of tables messages and users.
         """
 
