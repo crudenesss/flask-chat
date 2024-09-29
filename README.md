@@ -79,10 +79,10 @@ Visit [Issues](https://github.com/crudenesss/flask-chat/issues) to get info abou
 
 Those and other upcoming tweaks and features to be released listed below:
 
+- [x] Users profile view
 - [ ] Securing application with HTTPS and WSS
 - [ ] Simple application design
 - [ ] PGP keys
 - [ ] Admin panel and moderation system
-- [x] Users profile view
 - [ ] Changing password
 - [ ] Verification of renewed user information with user password
