@@ -57,16 +57,26 @@ def main():
 
     # Retrieve messages from database
     message_data = message_service.retrieve_messages(jsonify=True)
+    if not message_data and not isinstance(message_data, list):
+        logger.error("Failed to display messages.")
+        return render_template("error.html", message="Failed to display messages.")
 
     logger.debug("%s messages retrieved from collection 'messages'.", len(message_data))
 
-    user_data = user_service.get_user_by_id(user_id).to_json()
+    user_data = user_service.get_user_by_id(user_id)
+    if not user_data:
+        logger.error("Unable to load user info.")
+        return render_template(
+            "error.html",
+            message="Unable to process info about your identity. Pleasy try later.",
+        )
+
     logger.debug("Info about user retrieved successfully: %s", user_data)
 
     return render_template(
         "index.html",
         msg_data=message_data,
-        usr_data=user_data,
+        usr_data=user_data.to_json(),
         web_name=WEBSITE_NAME,
     )
 
@@ -95,15 +105,20 @@ def register():
     password = form.password.data
 
     # Check whether user tries to register with used credentials
-    if user_service.get_user_info(username=username) or user_service.get_user_info(email=email):
+    if user_service.get_user_info(username=username) or user_service.get_user_info(
+        email=email
+    ):
         flash("These credentials are already in use.")
         return redirect(request.url)
 
     # Make sure insertion is completed without errors
     result = user_service.insert_user(username, password, email)
     if not result:
-        logger.debug("New user registration failed")
-        return render_template("error.html")
+        logger.error("New user registration failed")
+        return render_template(
+            "error.html",
+            message="Registration failed due to the yet unknown reasons. Try again later.",
+        )
 
     logger.info("New user registration is completed successfully")
 
@@ -136,6 +151,12 @@ def login():
         return render_template("login.html", form=form)
 
     [user_data] = user_service.get_user_info(username=username)
+    if not user_data:
+        logger.error("Unable to load user info.")
+        return render_template(
+            "error.html",
+            message="Unable to process info about your identity. Pleasy try later.",
+        )
 
     # Here goes verifying password hashes
     if not user_data.verify_password(password):
@@ -178,8 +199,15 @@ def profile():
     user_id = get_jwt_identity()
 
     # Retrieve info from database about user
-    user_data = user_service.get_user_by_id(user_id).to_json()
+    user_data = user_service.get_user_by_id(user_id)
+    if not user_data:
+        logger.error("Unable to load user info.")
+        return render_template(
+            "error.html",
+            message="Unable to process info about your identity. Pleasy try later.",
+        )
 
+    user_data = user_data.to_json()
     current_user = user_data.get("username")
     logger.debug("Current user: %s", current_user)
 
@@ -237,9 +265,9 @@ def profile():
             content.save(file)
 
         # remove old picture to avoid trashing
-        if user_data.get("pp_name") is not None:
+        if user_data.get("profile_picture") is not None:
             os.remove(
-                os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("pp_name"))
+                os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("profile_picture"))
             )
             logger.debug("previous picture is removed")
 
@@ -247,7 +275,9 @@ def profile():
         result = user_service.update_user(user_id, profile_picture=picture_name)
         if not result:
             logger.debug("Data update failed")
-            return render_template("error.html")
+            return render_template(
+                "error.html", message="Unable to renew your info. Try again later."
+            )
 
         return render_template(
             "profile.html",
@@ -302,10 +332,11 @@ def profile():
         result = user_service.update_user(user_id, update_dict=newvalues)
         if not result:
             logger.debug("Data update failed")
-            return render_template("error.html")
+            return render_template(
+                "error.html", message="Unable to renew your info. Try again later."
+            )
 
         logger.info("User info updated successfully")
-        user_data = user_service.get_user_by_id(user_id)
 
     return redirect("/myprofile")
 
@@ -318,8 +349,15 @@ def public_profile(user):
     log_request()
 
     user_id = get_jwt_identity()
-    current_user = user_service.get_user_by_id(user_id).username
+    current_user_info = user_service.get_user_by_id(user_id)
+    if not current_user_info:
+        logger.error("Unable to load user info.")
+        return render_template(
+            "error.html",
+            message="Unable to process info about your identity. Pleasy try later.",
+        )
 
+    current_user = current_user_info.username
     logger.debug("Current user: %s", current_user)
 
     # Check whether user exists. If not, throw 404
@@ -345,7 +383,15 @@ def profile_picture(user):
 
     log_request()
 
-    profile_picture_name = user_service.get_user_info(username=user)[0].profile_picture
+    user_info = user_service.get_user_info(username=user)
+    if not user_info:
+        logger.error("Unable to load user info.")
+        return render_template(
+            "error.html",
+            message="Unable to process info about your identity. Pleasy try later.",
+        )
+
+    profile_picture_name = user_info[0].profile_picture
 
     # Check if user has his profile picture set -
     # if not - return path with default picture

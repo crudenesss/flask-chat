@@ -80,22 +80,23 @@ def handle_message(msg):
     # Getting the username of message sender
     user_id = get_jwt_identity()
 
-    username = user_service.get_user_by_id(user_id).username
-    logger.debug("Current user: %s", username)
-
     # Retrieve message
     message = msg.get("message")
     logger.debug("Message received: %s", message)
 
-    # Append username info to pass through socket
-    msg["username"] = username
-
     # Save to database
     result = message_service.insert_message(message, user_id)
     if not result:
-        logger.error("An error occured while handling message")
-        return render_template("error.html")
+        logger.error("An error occured while inserting message")
+        return render_template(
+            "error.html", message="An error occured while inserting message"
+        )
 
+    username = user_service.get_user_by_id(user_id).username
+    logger.debug("Current user: %s", username)
+
+    # Append username info to pass through socket
+    msg["username"] = username
     socket.emit("message", msg)
 
 
@@ -127,6 +128,9 @@ def load_messages(cnt):
     messages = message_service.retrieve_messages(
         initial_load=False, counter=int(cnt), jsonify=True
     )
+    if not messages:
+        logger.error("An error occured while loading messages.")
+        return
 
     logger.debug("%s messages retrieved from collection.", len(messages))
 

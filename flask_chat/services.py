@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.exc import SQLAlchemyError
 
 from models import User, Message
 from utils.helpers import random_strings_generator
@@ -42,10 +43,14 @@ class UserService:
             _User_:
             User object.
         """
-        session = self.session()
-        result = session.query(User).get(identity)
-        session.close()
-        return result
+        try:
+            session = self.session()
+            result = session.query(User).get(identity)
+            session.close()
+            return result
+        except SQLAlchemyError:
+            logger.error("An error occured while establishing conection with PostgreSQL instance.")
+            return None
 
     def get_user_info(self, **kwargs):
         r"""Retrieve list of users from connected database. Provide additional
@@ -55,16 +60,20 @@ class UserService:
             _List\[User\]_:
             list of User objects.
         """
-        session = self.session()
+        try:
+            session = self.session()
 
-        if kwargs:
-            results = session.query(User).filter_by(**kwargs).all()
-        else:
-            results = session.query(User).all()
+            if kwargs:
+                results = session.query(User).filter_by(**kwargs).all()
+            else:
+                results = session.query(User).all()
 
-        logger.debug(results)
-        session.close()
-        return results
+            logger.debug(results)
+            session.close()
+            return results
+        except SQLAlchemyError:
+            logger.error("An error occured while establishing conection with PostgreSQL instance.")
+            return None
 
     def insert_user(self, username, password, email):
         """Insert row in a database which with all user info provided
@@ -83,25 +92,29 @@ class UserService:
             _type_:
             Acknowledgement of operation.
         """
-        session = self.session()
+        try:
+            session = self.session()
 
-        if session.query(User).all():
-            role = "user"
-        else:
-            role = "admin"
+            if session.query(User).all():
+                role = "user"
+            else:
+                role = "admin"
 
-        new_user = User(
-            user_id="uid-" + random_strings_generator(),
-            username=username,
-            email=email,
-            role_id=role,
-        )
-        new_user.set_password(password)
+            new_user = User(
+                user_id="uid-" + random_strings_generator(),
+                username=username,
+                email=email,
+                role_id=role,
+            )
+            new_user.set_password(password)
 
-        session.add(new_user)
-        session.commit()
-        session.close()
-        return True
+            session.add(new_user)
+            session.commit()
+            session.close()
+            return True
+        except SQLAlchemyError:
+            logger.error("An error occured while establishing conection with PostgreSQL instance.")
+            return False
 
     def update_user(self, identity, update_dict=None, **kwargs):
         """Update User info with provided arguments.
@@ -118,20 +131,24 @@ class UserService:
             _bool_: 
             _True_ if update operation completed successfully, otherwise _False_.
         """
-        session = self.session()
-        if update_dict:
-            result = session.query(User).filter_by(user_id=identity).update(update_dict)
-        elif kwargs:
-            result = session.query(User).filter_by(user_id=identity).update(kwargs)
-        else:
-            logger.debug("No update to execute, as parameters were not provided.")
-            return
+        try:
+            session = self.session()
+            if update_dict:
+                result = session.query(User).filter_by(user_id=identity).update(update_dict)
+            elif kwargs:
+                result = session.query(User).filter_by(user_id=identity).update(kwargs)
+            else:
+                logger.debug("No update to execute, as parameters were not provided.")
+                return
 
-        session.commit()
-        session.close()
+            session.commit()
+            session.close()
+        except SQLAlchemyError:
+            logger.error("An error occured while establishing conection with PostgreSQL instance.")
+            return False
 
         if result < 1:
-            logger.debug("Update failed.")
+            logger.debug("No rows affected after update operation.")
             return False
 
         logger.debug("User info updated successfully: %s row(s) affected.", result)
@@ -148,10 +165,14 @@ class MessageService:
     def count(self):
         """Return total count of messages stored in database.
         """
-        session = self.session()
-        total_count = session.query(Message).count()
-        session.close()
-        return total_count
+        try:
+            session = self.session()
+            total_count = session.query(Message).count()
+            session.close()
+            return total_count
+        except SQLAlchemyError:
+            logger.error("An error occured while establishing conection with PostgreSQL instance.")
+            return None
 
     def insert_message(self, message, user_id):
         """_summary_
@@ -166,20 +187,23 @@ class MessageService:
         ### Returns:
             _type_: _description_
         """
+        try:
+            session = self.session()
 
-        session = self.session()
+            new_message = Message(
+                message_id="mid-" + random_strings_generator(),
+                message_content=message,
+                message_timestamp=str(datetime.now().timestamp()),
+                user_id=user_id
+            )
 
-        new_message = Message(
-            message_id="mid-" + random_strings_generator(),
-            message_content=message,
-            message_timestamp=str(datetime.now().timestamp()),
-            user_id=user_id
-        )
-
-        session.add(new_message)
-        session.commit()
-        session.close()
-        return True
+            session.add(new_message)
+            session.commit()
+            session.close()
+            return True
+        except SQLAlchemyError:
+            logger.error("An error occured while establishing conection with PostgreSQL instance.")
+            return False
 
     def retrieve_messages(self, initial_load=True, counter=None, jsonify=False):
         r"""Retrieve messages from database ready to be rendered on page.
@@ -200,33 +224,37 @@ class MessageService:
             retrieved messages as join result of tables messages and users.
         """
 
-        session = self.session()
+        try:
+            session = self.session()
 
-        query = session.query(
-            Message.message_id,
-            Message.message_content,
-            Message.message_timestamp,
-            Message.message_edited,
-            User.user_id,
-            User.username
-        ).join(User, Message.user_id==User.user_id)
+            query = session.query(
+                Message.message_id,
+                Message.message_content,
+                Message.message_timestamp,
+                Message.message_edited,
+                User.user_id,
+                User.username
+            ).join(User, Message.user_id==User.user_id)
 
-        if initial_load:
-            rows_returning_query = query.offset(
-                0
-                if session.query(Message).count() < MSG_LOAD_BATCH
-                else session.query(Message).count() - MSG_LOAD_BATCH
-            ).limit(MSG_LOAD_BATCH)
-        else:
-            rows_returning_query = query.offset(
-                0
-                if session.query(Message).count() < MSG_LOAD_BATCH + counter
-                else session.query(Message).count() - MSG_LOAD_BATCH - counter
-            ).limit(MSG_LOAD_BATCH)
+            if initial_load:
+                rows_returning_query = query.offset(
+                    0
+                    if session.query(Message).count() < MSG_LOAD_BATCH
+                    else session.query(Message).count() - MSG_LOAD_BATCH
+                ).limit(MSG_LOAD_BATCH)
+            else:
+                rows_returning_query = query.offset(
+                    0
+                    if session.query(Message).count() < MSG_LOAD_BATCH + counter
+                    else session.query(Message).count() - MSG_LOAD_BATCH - counter
+                ).limit(MSG_LOAD_BATCH)
 
-        result = rows_returning_query.all()
-        logger.debug("%s rows retrieved: %s", len(result), result)
-        session.close()
+            result = rows_returning_query.all()
+            logger.debug("%s rows retrieved: %s", len(result), result)
+            session.close()
+        except SQLAlchemyError:
+            logger.error("An error occured while establishing conection with PostgreSQL instance.")
+            return None
 
         if jsonify:
             for index, message in enumerate(result):
