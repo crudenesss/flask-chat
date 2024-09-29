@@ -1,7 +1,7 @@
 services:
 
   postgres:
-    container_name: postgresql
+    container_name: ${POSTGRES_HOSTNAME}
     image: postgres:16
     environment:
       - POSTGRES_USERNAME=${POSTGRES_USERNAME}
@@ -9,7 +9,7 @@ services:
       - PGDATABASE=${PGDATABASE}
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./setup/scripts/setup.sh:/docker-entrypoint-initdb.d/setup.sh
+      - ./setup-scripts/setup.sh:/docker-entrypoint-initdb.d/setup.sh
     networks:
       - app-network
 
