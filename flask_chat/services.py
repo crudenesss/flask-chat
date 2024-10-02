@@ -73,7 +73,6 @@ class UserService:
             else:
                 results = session.query(User).all()
 
-            logger.debug(results)
             return results
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
@@ -288,6 +287,5 @@ class MessageService:
         if jsonify:
             for index, message in enumerate(result):
                 result[index] = message._mapping
-                logger.debug(result[index])
 
         return result
