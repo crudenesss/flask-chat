@@ -11,23 +11,23 @@ psql -c "CREATE TABLE roles (
 );"
 
 psql -c "CREATE TABLE users (
-    user_id VARCHAR(80) PRIMARY KEY,
+    user_id VARCHAR(36) PRIMARY KEY,
     username VARCHAR(32) NOT NULL,
     passwd VARCHAR(256) NOT NULL,
     email VARCHAR(320) NOT NULL,
     bio VARCHAR(256),
-    profile_picture VARCHAR(128),
+    profile_picture VARCHAR(36),
     role_id INTEGER,
 
     FOREIGN KEY (role_id) REFERENCES roles(role_id)
 );"
 
 psql -c "CREATE TABLE messages (
-    message_id VARCHAR(80) PRIMARY KEY,
+    message_id VARCHAR(36) PRIMARY KEY,
     message_content VARCHAR(4096) NOT NULL,
     message_timestamp VARCHAR(32) NOT NULL, 
     message_edited BOOLEAN NOT NULL,
-    user_id VARCHAR(80),
+    user_id VARCHAR(36),
 
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );"

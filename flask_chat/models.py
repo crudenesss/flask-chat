@@ -29,12 +29,12 @@ class User(Base):
 
     __tablename__ = "users"
 
-    user_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     username: Mapped[str] = mapped_column(String(32))
     passwd: Mapped[str] = mapped_column(String(256))
     email: Mapped[str] = mapped_column(String(320))
     bio: Mapped[Optional[str]] = mapped_column(String(256))
-    profile_picture: Mapped[Optional[str]] = mapped_column(String(128))
+    profile_picture: Mapped[Optional[str]] = mapped_column(String(36))
     role_id: Mapped[str] = mapped_column(
         Integer(), ForeignKey("roles.role_id", ondelete="RESTRICT", onupdate="CASCADE")
     )
@@ -98,12 +98,12 @@ class Message(Base):
 
     __tablename__ = "messages"
 
-    message_id: Mapped[str] = mapped_column(String(80), primary_key=True)
+    message_id: Mapped[str] = mapped_column(String(36), primary_key=True)
     message_content: Mapped[str] = mapped_column(String(4096))
     message_timestamp: Mapped[str] = mapped_column(String(32))
     message_edited: Mapped[bool] = mapped_column(Boolean(), default=False)
     user_id: Mapped[str] = mapped_column(
-        String(80), ForeignKey("users.user_id", onupdate="CASCADE")
+        String(36), ForeignKey("users.user_id", onupdate="CASCADE")
     )
 
     msg_user_id: Mapped[str] = relationship("User", foreign_keys=[user_id])

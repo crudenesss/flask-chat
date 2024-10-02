@@ -101,7 +101,7 @@ class UserService:
                 role = ADMIN_ROLE_ID
 
             new_user = User(
-                user_id="uid-" + random_strings_generator(),
+                user_id=random_strings_generator(),
                 username=username,
                 email=email,
                 role_id=role,
@@ -193,7 +193,7 @@ class MessageService:
             session = self.session()
 
             new_message = Message(
-                message_id="mid-" + random_strings_generator(),
+                message_id=random_strings_generator(),
                 message_content=message,
                 message_timestamp=str(datetime.now().timestamp()),
                 user_id=user_id
