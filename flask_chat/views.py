@@ -151,15 +151,8 @@ def login():
         return render_template("login.html", form=form)
 
     [user_data] = user_service.get_user_info(username=username)
-    if not user_data:
-        logger.error("Unable to load user info.")
-        return render_template(
-            "error.html",
-            message="Unable to process info about your identity. Pleasy try later.",
-        )
-
-    # Here goes verifying password hashes
-    if not user_data.verify_password(password):
+    # Here we validate whether user exists or if password for user is valid
+    if not user_data or not user_data.verify_password(password):
         flash("Invalid username or password.")
         logger.info("Login failed")
         return render_template("login.html", form=form)
@@ -240,17 +233,10 @@ def profile():
         )
 
     # Check if request contains data about file uploaded
-    if request.files["file"].read() != b"":
-        content = request.files["file"]
-        content.seek(0)
-        content_clean = content.read()
-        content.seek(0)
+    content_clean = request.files["file"].read()
+    if content_clean != b"":
 
-        # Check if received file's content is empty or if file was not chosen
-        if content_clean == b"":
-            flash("Empty upload file provided.")
-            return redirect(request.url)
-
+        # Verify received image content
         if not verify_image(content_clean):
             flash("The file is inappropriate or corrupted. Try again")
             return redirect(request.url)
@@ -262,22 +248,24 @@ def profile():
         with open(
             os.path.join(PROFILE_PICTURE_STORAGE_PATH, picture_name), "wb"
         ) as file:
-            content.save(file)
-
-        # remove old picture to avoid trashing
-        if user_data.get("profile_picture") is not None:
-            os.remove(
-                os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("profile_picture"))
-            )
-            logger.debug("previous picture is removed")
+            file.write(content_clean)
 
         # Update profile picture filename in database
         result = user_service.update_user(user_id, profile_picture=picture_name)
         if not result:
-            logger.debug("Data update failed")
-            return render_template(
-                "error.html", message="Unable to renew your info. Try again later."
-            )
+            logger.debug("Profile picture update failed.")
+            flash("Unable to renew your profile picture. Try again later.")
+            return redirect(request.url)
+
+        # remove old picture to avoid trashing
+        if user_data.get("profile_picture") is not None:
+            try:
+                os.remove(
+                    os.path.join(PROFILE_PICTURE_STORAGE_PATH, user_data.get("profile_picture"))
+                )
+                logger.debug("Previous picture is removed.")
+            except FileNotFoundError:
+                logger.debug("No picture to remove: proceeding...")
 
         return render_template(
             "profile.html",
@@ -296,8 +284,8 @@ def profile():
 
     for field in form:
 
-        # Exclude hidden csrf_token field from cycle
-        if field.name == "csrf_token":
+        # Exclude hidden csrf_token field or other inappropriate fields
+        if field.name not in ["username", "password", "email", "bio"]:
             continue
 
         # Check if provided data is the same as previous
@@ -396,12 +384,16 @@ def profile_picture(user):
     # Check if user has his profile picture set -
     # if not - return path with default picture
     if profile_picture_name is None:
-        logger.debug("No picture to retrieve: set to default")
+        logger.debug("Profile picture not set: using default.")
         return send_file(DEFAULT_PROFILE_PICTURE_PATH)
-    else:
-        return send_file(
-            os.path.join(PROFILE_PICTURE_STORAGE_PATH, profile_picture_name)
-        )
+
+    profile_picture_path = os.path.join(PROFILE_PICTURE_STORAGE_PATH, profile_picture_name)
+
+    if not os.path.exists(profile_picture_path):
+        logger.debug("Profile picture not found: using default.")
+        return send_file(DEFAULT_PROFILE_PICTURE_PATH)
+
+    return send_file(profile_picture_path)
 
 
 @views_bp.route("/manage")
