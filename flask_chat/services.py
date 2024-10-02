@@ -43,14 +43,18 @@ class UserService:
             _User_:
             User object. _None_ if exception caught.
         """
+        session = self.session()
+        logger.debug("Starting a session.")
+
         try:
-            session = self.session()
             result = session.query(User).get(identity)
-            session.close()
             return result
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
             return None
+        finally:
+            logger.debug("Closing session.")
+            session.close()
 
     def get_user_info(self, **kwargs):
         r"""Retrieve list of users from connected database. Provide additional
@@ -60,20 +64,23 @@ class UserService:
             _List\[User\]_:
             list of User objects. _None_ if an exception is caught.
         """
-        try:
-            session = self.session()
+        session = self.session()
+        logger.debug("Starting a session.")
 
+        try:
             if kwargs:
                 results = session.query(User).filter_by(**kwargs).all()
             else:
                 results = session.query(User).all()
 
             logger.debug(results)
-            session.close()
             return results
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
             return None
+        finally:
+            logger.debug("Closing session.")
+            session.close()
 
     def insert_user(self, username, password, email):
         """Insert row in a database which with all user info provided.
@@ -92,9 +99,10 @@ class UserService:
             _bool_:
             _True_ if operation is successful, otherwise _False_.
         """
-        try:
-            session = self.session()
+        session = self.session()
+        logger.debug("Starting a session.")
 
+        try:
             if session.query(User).all():
                 role = USER_ROLE_ID
             else:
@@ -110,11 +118,13 @@ class UserService:
 
             session.add(new_user)
             session.commit()
-            session.close()
             return True
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
             return False
+        finally:
+            logger.debug("Closing session.")
+            session.close()
 
     def update_user(self, identity, update_dict=None, **kwargs):
         """Update User info with provided arguments.
@@ -131,21 +141,25 @@ class UserService:
             _bool_: 
             _True_ if update operation completed successfully, otherwise _False_.
         """
+        session = self.session()
+        logger.debug("Starting a session.")
+
         try:
-            session = self.session()
             if update_dict:
                 result = session.query(User).filter_by(user_id=identity).update(update_dict)
             elif kwargs:
                 result = session.query(User).filter_by(user_id=identity).update(kwargs)
             else:
                 logger.debug("No update to execute, as parameters were not provided.")
-                return
+                return False
 
             session.commit()
-            session.close()
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
             return False
+        finally:
+            logger.debug("Closing session.")
+            session.close()
 
         if result < 1:
             logger.debug("No rows affected after update operation.")
@@ -166,14 +180,18 @@ class MessageService:
         """Return total count of messages stored in database. Return _None_
         if exception is caught.
         """
+        session = self.session()
+        logger.debug("Starting a session.")
+
         try:
-            session = self.session()
             total_count = session.query(Message).count()
-            session.close()
             return total_count
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
             return None
+        finally:
+            logger.debug("Closing session.")
+            session.close()
 
     def insert_message(self, message, user_id):
         """Insert all provided message info to database.
@@ -189,9 +207,10 @@ class MessageService:
             _bool_:
             _True_ if insert operation is completed successfully, otherwise _False_.
         """
-        try:
-            session = self.session()
+        session = self.session()
+        logger.debug("Starting a session.")
 
+        try:
             new_message = Message(
                 message_id=random_strings_generator(),
                 message_content=message,
@@ -201,11 +220,13 @@ class MessageService:
 
             session.add(new_message)
             session.commit()
-            session.close()
             return True
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
             return False
+        finally:
+            logger.debug("Closing session.")
+            session.close()
 
     def retrieve_messages(self, initial_load=True, counter=None, jsonify=False):
         r"""Retrieve messages from database ready to be rendered on page.
@@ -229,10 +250,10 @@ class MessageService:
             _List\[Row\[Tuple\[Message, User\]\]\]_ | _dict_: 
             retrieved messages as join result of tables messages and users.
         """
+        session = self.session()
+        logger.debug("Starting a session.")
 
         try:
-            session = self.session()
-
             query = session.query(
                 Message.message_id,
                 Message.message_content,
@@ -257,10 +278,12 @@ class MessageService:
 
             result = rows_returning_query.all()
             logger.debug("%s rows retrieved: %s", len(result), result)
-            session.close()
         except SQLAlchemyError:
             logger.error("An error occured while establishing conection with PostgreSQL instance.")
             return None
+        finally:
+            logger.debug("Closing session.")
+            session.close()
 
         if jsonify:
             for index, message in enumerate(result):
