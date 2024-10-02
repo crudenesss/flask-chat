@@ -6,8 +6,8 @@ psql -c "\c ${PGDATABASE};"
 
 # Create all tables 
 psql -c "CREATE TABLE roles ( 
-    role_id VARCHAR(32) PRIMARY KEY,
-    role_name VARCHAR(64)
+    role_id INTEGER PRIMARY KEY,
+    role_name VARCHAR(16)
 );"
 
 psql -c "CREATE TABLE users (
@@ -17,7 +17,7 @@ psql -c "CREATE TABLE users (
     email VARCHAR(320) NOT NULL,
     bio VARCHAR(256),
     profile_picture VARCHAR(128),
-    role_id VARCHAR(32),
+    role_id INTEGER,
 
     FOREIGN KEY (role_id) REFERENCES roles(role_id)
 );"
@@ -43,9 +43,9 @@ psql -c "GRANT SELECT, INSERT, UPDATE, DELETE ON \"roles\" TO \"${POSTGRES_USERN
 # Insert starter data
 PGPASSWORD=${POSTGRES_PASSWORD} psql -U ${POSTGRES_USERNAME} -c \
     "INSERT INTO roles VALUES 
-    ('admin', 'Admin'),
-    ('mod', 'Moderator'),
-    ('user', NULL);"
+    (1, 'Admin'),
+    (2, 'Moderator'),
+    (3, 'User');"
 
 # Set access rules into pg_hba.conf
 echo "local ${PGDATABASE} ${POSTGRES_USERNAME} password

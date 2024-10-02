@@ -3,8 +3,10 @@
 import logging
 from typing import Optional
 from argon2 import PasswordHasher, exceptions
-from sqlalchemy import String, ForeignKey, Boolean
+from sqlalchemy import String, ForeignKey, Boolean, Integer
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+from utils.constants import ADMIN_ROLE_ID, MOD_ROLE_ID
 
 logger = logging.getLogger("gunicorn.access")
 
@@ -18,7 +20,7 @@ class Role(Base):
 
     __tablename__ = "roles"
 
-    role_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    role_id: Mapped[str] = mapped_column(Integer(), primary_key=True)
     role_name: Mapped[str] = mapped_column(String(64))
 
 
@@ -34,7 +36,7 @@ class User(Base):
     bio: Mapped[Optional[str]] = mapped_column(String(256))
     profile_picture: Mapped[Optional[str]] = mapped_column(String(128))
     role_id: Mapped[str] = mapped_column(
-        String(32), ForeignKey("roles.role_id", ondelete="RESTRICT", onupdate="CASCADE")
+        Integer(), ForeignKey("roles.role_id", ondelete="RESTRICT", onupdate="CASCADE")
     )
 
     usr_role_id: Mapped[Role] = relationship("Role", foreign_keys=[role_id])
@@ -80,7 +82,7 @@ class User(Base):
             **bool**:
             _True_ if user is privileged, otherwise _False_.
         """
-        return self.role_id in ["admin", "mod"]
+        return self.role_id in [ADMIN_ROLE_ID, MOD_ROLE_ID]
 
     def to_json(self):
         """Represent User class as JSON.

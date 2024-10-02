@@ -10,7 +10,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from models import User, Message
 from utils.helpers import random_strings_generator
-from utils.constants import MSG_LOAD_BATCH
+from utils.constants import MSG_LOAD_BATCH, ADMIN_ROLE_ID, USER_ROLE_ID
 
 # Initialise logger
 logger = logging.getLogger("gunicorn.access")
@@ -96,9 +96,9 @@ class UserService:
             session = self.session()
 
             if session.query(User).all():
-                role = "user"
+                role = USER_ROLE_ID
             else:
-                role = "admin"
+                role = ADMIN_ROLE_ID
 
             new_user = User(
                 user_id="uid-" + random_strings_generator(),
