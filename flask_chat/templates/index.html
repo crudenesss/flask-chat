@@ -14,7 +14,7 @@
   <body>
     <ul>
       <li><a href="/myprofile">Profile</a></li>
-      {% if usr_data.role != "user" %}
+      {% if usr_data.role_id in [1, 2] %}
         <li><a href="/manage">Manage Chat</a></li>
       {% endif %}
       <li><a href="/logout">Log out</a></li>

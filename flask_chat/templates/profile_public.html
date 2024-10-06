@@ -30,9 +30,11 @@
           <div>
             <a href="/">Back to Chat</a>
           </div>
-          <div>
-            <a href="/myprofile">Switch to personal view</a>
-          </div>
+          {% if data.username == current_user %}
+            <div>
+              <a href="/myprofile">Switch to personal view</a>
+            </div>
+          {% endif %}
         </div>
       </div>
     </div>

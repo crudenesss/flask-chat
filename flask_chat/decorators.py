@@ -12,9 +12,8 @@ def privilege_required(f):
     @wraps(f)
     @jwt_required()
     def decorated_function(*args, **kwargs):
-        user_service = UserService()
-        [user] = user_service.get_user_by_id(get_jwt_identity())
-        if user.is_privileged():
+        user = UserService().get_user_by_id(get_jwt_identity())
+        if not user.is_privileged():
             return abort(403)
         return f(*args, **kwargs)
 

@@ -300,16 +300,10 @@ def profile():
         kwargs = {field.name: field.data}
 
         # Check whether user tries to replace username/email with used credentials
-        if user_service.get_user_info(**kwargs)[0]:
+        if user_service.get_user_info(**kwargs):
             flash("These credentials are already in use.")
 
-            return render_template(
-                "profile.html",
-                form=form,
-                current_user=current_user,
-                csrf_token=csrf_token,
-                data=user_data,
-            )
+            return redirect(request.url)
 
         newvalues[field.name] = field.data
 
@@ -326,7 +320,7 @@ def profile():
 
         logger.info("User info updated successfully")
 
-    return redirect("/myprofile")
+    return redirect(request.url)
 
 
 @views_bp.route("/profile/<user>", methods=["GET"])
