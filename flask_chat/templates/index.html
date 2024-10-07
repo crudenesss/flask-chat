@@ -14,7 +14,7 @@
   <body>
     <ul>
       <li><a href="/myprofile">Profile</a></li>
-      {% if usr_data.role != "user" %}
+      {% if usr_data.role_id in [1, 2] %}
         <li><a href="/manage">Manage Chat</a></li>
       {% endif %}
       <li><a href="/logout">Log out</a></li>
@@ -29,8 +29,8 @@
       {% for msg in msg_data %}
       <div>
         <p><a href="/profile/{{ msg.username }}">{{ msg.username }}</a></p>
-        <p>{{ msg.message }}</p>
-        <p class="timestamp" data-timestamp="{{ msg.timestamp }}"></p>
+        <p>{{ msg.message_content }}</p>
+        <p class="timestamp" data-timestamp="{{ msg.message_timestamp }}"></p>
       </div>
       {% endfor %}
     </div>

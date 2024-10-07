@@ -1,6 +1,7 @@
 """Special configuration for logging with gunicorn"""
+
 from os import getenv
-from utils.filters import FilterDebug, IgnoreDebug
+from utils.filters import FilterDebug, FilterInfo
 
 LOG_LEVEL = getenv("LOGGING_LEVEL")
 
@@ -25,8 +26,8 @@ logconfig_dict = {
         "filter_debug": {
             "()": FilterDebug,
         },
-        "ignore_debug": {
-            "()": IgnoreDebug,
+        "filter_info": {
+            "()": FilterInfo,
         },
     },
     "handlers": {
@@ -36,28 +37,24 @@ logconfig_dict = {
             "filters": ["filter_debug"],
             "level": "DEBUG",
         },
-        "stdout": {
+        "stdout_default": {
             "class": "logging.StreamHandler",
             "formatter": "general",
-            "filters": ["ignore_debug"],
+            "filters": ["filter_info"],
             "level": "INFO",
+        },
+        "stdout_error": {
+            "class": "logging.StreamHandler",
+            "formatter": "detailed",
+            "level": "ERROR",
         }
     },
-    "root": {"handlers": ["stdout", "stdout_debug"], "level": "INFO"},
+    "root": {"handlers": ["stdout_default", "stdout_debug", "stdout_error"], "level": "INFO"},
     "loggers": {
         "gunicorn.access": {
-            "handlers": ["stdout", "stdout_debug"],
+            "handlers": ["stdout_default", "stdout_debug", "stdout_error"],
             "level": LOG_LEVEL,
             "propagate": False,
-        },
-        "setup": {
-            "handlers": ["stdout", "stdout_debug"],
-            "level": LOG_LEVEL,
-            "propagate": False
-        },
-        "pymongo.command": {
-            "level": "INFO",
-            "propagate": False,
-        },
-    },
+        }
+    }
 }

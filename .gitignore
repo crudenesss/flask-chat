@@ -2,5 +2,6 @@ venv
 __pycache__
 .env
 .idea
+confs
 local_scripts
-db_configurations
+misc

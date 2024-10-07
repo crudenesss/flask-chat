@@ -1,19 +1,10 @@
-# Root credentials (one time use)
-MONGO_INITDB_ROOT_USERNAME=admin
-MONGO_INITDB_ROOT_PASSWORD=verysecurepassword
-
 # Non privileged user credentials (to execute commands with)
-MONGO_USERNAME=user
-MONGO_PASSWORD=password
+POSTGRES_USERNAME=user
+POSTGRES_PASSWORD=password
 
-# In-app admin credentials
-APP_ADMINUSER=admin
-APP_ADMINEMAIL=example@mail.com
-APP_ADMINPASSWORD=examplepassword
-
-# Mongo misc properties
-MONGO_HOSTNAME=mongo
-MONGO_DATABASE=chat_db
+# Postgres misc properties
+POSTGRES_HOSTNAME=postgresql
+PGDATABASE=chat_db
 
 # logging configuration
 LOGGING_LEVEL=INFO

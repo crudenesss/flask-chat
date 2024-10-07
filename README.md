@@ -6,47 +6,16 @@
 
 ## Table of contents
 
-- [Description](#description)
-    - [Available features](#available-features)
-    - [Technology Stack](#technology-stack)
 - [Getting started](#getting-started)
     - [Requirements](#requirements)
     - [Deployment guide](#deployment-guide)
+- [Description](#description)
+    - [Available features](#available-features)
+    - [Technology Stack](#technology-stack)
 - [Roadmap](#roadmap)
 
-# Description
-
-### Available features
-
-**Interactive chat:**
-- Supports communication between several users in the chatroom.
-- Supports real time messaging using Web-Sockets.
-- Each message displays message's author, message itself and timestamp.
-
-**User profile:**
-- Contains `username`, `email` as required unique parameters, other optional parameters: `bio`.
-- User can edit their own profile info, such as `username`, `email`, `bio`.
-- User can upload their own profile picture. Basic image validation is also implemented. Otherwise default profile picture is rendered.
-
-
-### Technology Stack
-
-Listing of frameworks, tools and other stuff used in this project.
-
-#### Language: Python
-- **Framework:** Flask
-- **Package management:** Poetry
-- **Web-Sockets:** Flask-SocketIO
-- built-in **logging** framework
-- **Database connector:** PyMongo
-
-#### Deployment
-- **Orchestration:** Docker compose
-- **Application deployment:** Gunicorn
-
-#### Database: MongoDB
-
 # Getting started
+
 ### Requirements
 - Docker
 
@@ -68,16 +37,52 @@ docker compose up [-d]
 
 #### 4. Have fun!
 
+
+# Description
+
+### Available features
+
+**Interactive chat:**
+- Supports communication between several users in the chatroom.
+- Supports real time messaging using Web-Sockets.
+- Each message displays message's author, message itself and timestamp.
+
+**User profile:**
+- Contains `username`, `email` as required unique parameters, other optional parameters: `bio`.
+- User can edit their own profile info, such as `username`, `email`, `bio`.
+- User can upload their own profile picture. Basic image validation is also implemented. Otherwise default profile picture is rendered.
+- Users can view each other's profiles.
+
+
+### Technology Stack
+
+Listing of frameworks, tools and other stuff used in this project.
+
+#### Language: Python
+- **Framework:** Flask
+- **Package management:** Poetry
+- **Web-Sockets:** Flask-SocketIO
+- built-in **logging** framework
+- **Sessions:** Flask-JWT-Extended
+- **Other:** WTForms, argon2
+- **ORM:** SQLAlchemy
+
+#### Deployment
+- **Orchestration:** Docker compose
+- **Application deployment:** Gunicorn
+
+#### Database: PostgreSQL
+
 ## Roadmap
 
 Visit [Issues](https://github.com/crudenesss/flask-chat/issues) to get info about the most relevant upcoming features and theirs developing state.
 
 Those and other upcoming tweaks and features to be released listed below:
 
-- Securing application with HTTPS and WSS
-- Simple application design
-- PGP keys
-- Admin panel and moderation system
-- Users profile view
-- Changing password
-- Verification of renewed user information with user password
+- [x] Users profile view
+- [ ] Securing application with HTTPS and WSS
+- [ ] Simple application design
+- [ ] PGP keys
+- [ ] Admin panel and moderation system
+- [ ] Changing password
+- [ ] Verification of renewed user information with user password

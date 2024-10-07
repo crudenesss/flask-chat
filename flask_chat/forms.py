@@ -34,7 +34,10 @@ class RegForm(Form):
             You can use Latin letters (both cases), numbers and underscores. 
             Length must be 5-32 symbols.""",
     )
-    email = StringField("E-mail", [validators.DataRequired(), validators.Email()])
+    email = StringField(
+        "E-mail",
+        [validators.DataRequired(), validators.Email(message="Invalid email format.")],
+    )
     password = PasswordField(
         "New Password",
         [
@@ -78,7 +81,7 @@ class EditProfileForm(Form):
     )
     email = StringField(
         "E-mail",
-        [validators.DataRequired(), validators.Email()],
+        [validators.DataRequired(), validators.Email(message="Invalid email format.")],
         render_kw={"class": "editable", "readonly": True},
         name="email",
     )
