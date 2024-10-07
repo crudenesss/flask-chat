@@ -2,11 +2,6 @@
 POSTGRES_USERNAME=user
 POSTGRES_PASSWORD=password
 
-# In-app admin credentials
-APP_ADMIN_USER=admin
-APP_ADMIN_EMAIL=example@mail.com
-APP_ADMIN_PASSWORD=examplepassword
-
 # Postgres misc properties
 POSTGRES_HOSTNAME=postgresql
 PGDATABASE=chat_db
