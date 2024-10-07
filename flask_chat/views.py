@@ -277,7 +277,24 @@ def profile():
 
     if not form.validate():
         logger.debug("Validation of profile edit form's input failed")
-        return redirect(request.url)
+
+        for field in form:
+            if field.name == "csrf_token":
+                logger.debug("CSRF token is set")
+                field.data = csrf_token
+            elif user_data.get(field.name):
+                field.data = user_data.get(field.name)
+            # If the field from user's document is empty
+            else:
+                field.data = ""
+
+        return render_template(
+            "profile.html",
+            form=form,
+            current_user=current_user,
+            csrf_token=csrf_token,
+            data=user_data,
+        )
 
     # Create dictionary for values that were changed
     newvalues = {}
