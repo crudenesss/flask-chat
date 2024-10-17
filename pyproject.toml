@@ -3,7 +3,7 @@ package-mode = false
 name = "flask-chat"
 version = "0.1.0"
 description = ""
-authors = ["crudenesss <o.bochok26@gmail.com>"]
+authors = ["crudenesss <osbochok.w@gmail.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
