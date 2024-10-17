@@ -1,5 +1,5 @@
 <h1 align=center><b>YappSpace</b></h1>
-<p align=center>simple private chatroom for multiple users to chat and have fun.<br>
+<p align=center>simple private chatroom for multiple users to chat and have fun<br>
 <i><b>*Currently in development stage</b></i></p>
 
 <p align=center><a href="https://github.com/crudenesss/flask-chat/issues">Report Bug/Request Feature</a></p>
@@ -18,6 +18,8 @@
 
 ### Requirements
 - Docker
+- Domain
+- SSL certificates
 
 ### Deployment guide
 
@@ -30,7 +32,7 @@ File `env_example` contains all required variables. You may just rename this fil
 
 #### 3. Docker time!
 
-Navigate to project directory in CLI and type this command for running the application (add -d flag if you need your logs hidden):
+Navigate to project directory in CLI and type this command for running the application (add `-d` flag if you need your logs hidden):
 ```
 docker compose up [-d]
 ```
@@ -70,6 +72,7 @@ Listing of frameworks, tools and other stuff used in this project.
 #### Deployment
 - **Orchestration:** Docker compose
 - **Application deployment:** Gunicorn
+- **Networking:** nginx
 
 #### Database: PostgreSQL
 
@@ -80,7 +83,7 @@ Visit [Issues](https://github.com/crudenesss/flask-chat/issues) to get info abou
 Those and other upcoming tweaks and features to be released listed below:
 
 - [x] Users profile view
-- [ ] Securing application with HTTPS and WSS
+- [x] Securing application with HTTPS and WSS
 - [ ] Simple application design
 - [ ] PGP keys
 - [ ] Admin panel and moderation system
