@@ -6,5 +6,10 @@ POSTGRES_PASSWORD=password
 POSTGRES_HOSTNAME=postgresql
 PGDATABASE=chat_db
 
-# logging configuration
+# Logging configuration (Preferred not to be changed on prod)
 LOGGING_LEVEL=INFO
+
+# Nginx
+CHAIN_PATH=/path/to/fullchain/cert.pem
+PRIVKEY_PATH=/path/to/privkey.pem
+DOMAIN_NAME=example.com
