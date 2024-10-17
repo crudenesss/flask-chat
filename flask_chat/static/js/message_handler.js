@@ -1,5 +1,5 @@
 // initialising socket connection
-const socket = io.connect("http://" + document.location.hostname + ":5000/");
+const socket = io.connect("https://" + document.location.hostname + ":" + document.location.port + "/");
 var messagesLoaded;
 
 // number of overall loaded messages on the page - works as counter
